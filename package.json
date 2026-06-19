@@ -1,9 +1,8 @@
 {
-  "name": "pop-simulador",
+  "name": "centro-control-pop",
   "version": "1.0.0",
   "private": true,
-  "description": "Simulador de pricing POP Investments con versionado",
   "dependencies": {
-    "@vercel/postgres": "^0.10.0"
+    "pg": "^8.11.3"
   }
 }
