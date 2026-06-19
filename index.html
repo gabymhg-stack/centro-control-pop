@@ -1,19 +1,4 @@
 <!DOCTYPE html>
-<script type="application/json" id="cowork-artifact-meta">
-{
-  "name": "Centro Control Pop",
-  "schemaVersion": 1,
-  "description": "Centro de Control Comercial · POP Investments — Tablero de gestión para Gaby con Dashboard + Kanban + Lista + Minuta + Calendario + Ajustes. Datos reales del equipo comercial (70 tareas). Toggles ⭐/🚩 por tarea, gráficas Chart.js, quick-add inline en lista.",
-  "mcpTools": [
-    "mcp__ec563de5-7147-4e60-9568-ac6ca84b7397__outlook_email_search",
-    "mcp__ec563de5-7147-4e60-9568-ac6ca84b7397__outlook_calendar_search"
-  ],
-  "mcpServerNames": [
-    "Microsoft 365",
-    "Microsoft 365"
-  ]
-}
-</script>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -24,6 +9,15 @@
 :root { color-scheme: light; }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; color: #111827; height: 100vh; display: flex; overflow: hidden; font-size: 13px; line-height: 1.5; }
+
+/* LOADING OVERLAY */
+#loading-overlay { position: fixed; inset: 0; background: #f0f2f5; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+#loading-overlay.hidden { display: none; }
+.ld-pop { font-size: 36px; font-weight: 900; color: #111827; letter-spacing: -2px; }
+.ld-txt { font-size: 13px; color: #6b7280; }
+.ld-bar { width: 200px; height: 3px; background: #e5e7eb; border-radius: 2px; overflow: hidden; }
+.ld-bar-inner { height: 100%; background: #f43f5e; border-radius: 2px; animation: ld 1.2s ease-in-out infinite; }
+@keyframes ld { 0%{width:0;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0;margin-left:100%} }
 
 /* SIDEBAR */
 #sb { width: 216px; flex-shrink: 0; background: #111827; display: flex; flex-direction: column; overflow: hidden; }
@@ -46,7 +40,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sa
 #tb-left { flex: 1; }
 #tb-title { font-size: 15px; font-weight: 800; color: #111827; }
 #tb-sub { font-size: 11px; color: #9ca3af; }
-#tb-actions { display: flex; gap: 8px; }
+#tb-actions { display: flex; gap: 8px; align-items: center; }
 #content { flex: 1; overflow-y: auto; }
 
 /* SECTIONS */
@@ -62,8 +56,28 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sa
 .btn-sm { padding: 4px 9px; font-size: 11px; }
 .btn-icon { padding: 5px 7px; background: transparent; border: none; cursor: pointer; color: #9ca3af; font-size: 13px; border-radius: 5px; }
 .btn-icon:hover { background: #f3f4f6; color: #374151; }
-.toggle-btn { background: none; border: none; cursor: pointer; font-size: 15px; padding: 3px 5px; border-radius: 5px; transition: transform 0.12s; line-height: 1; }
+.toggle-btn { background: none; border: none; cursor: pointer; font-size: 15px; padding: 3px 5px; border-radius: 5px; transition: transform 0.12s, background 0.12s; line-height: 1; }
 .toggle-btn:hover { transform: scale(1.25); background: #f3f4f6; }
+.toggle-btn.active-star { background: #fef9c3 !important; }
+.toggle-btn.active-flag { background: #fee2e2 !important; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* RESP GRID (modal) */
+.resp-grid { display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;min-height:40px; }
+.rchk-lbl { display:flex;align-items:center;gap:4px;padding:3px 8px 3px 5px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:700;border:1.5px solid #e5e7eb;background:#fff;transition:all .12s;user-select:none; }
+.rchk-lbl:hover { border-color:#6366f1; }
+.rchk-lbl input { display:none; }
+.rchk-lbl.rchk-on { color:#fff; border-color:transparent; }
+
+/* KB SORT */
+.kb-sort-row { display:flex;gap:6px;align-items:center; }
+.kb-sort-btn { padding:4px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;font-size:11px;font-weight:600;color:#6b7280;cursor:pointer;transition:all .12s;font-family:inherit; }
+.kb-sort-btn.active { background:#111827;color:#fff;border-color:#111827; }
+
+/* MINUTA ARCHIVE */
+.minuta-arc-card { background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:10px; }
+.minuta-arc-date { font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between; }
+.minuta-arc-content { font-size:12px;color:#374151;line-height:1.6;white-space:pre-wrap;max-height:100px;overflow-y:auto; }
 
 /* KPI ROW */
 .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
@@ -217,25 +231,12 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
 .mb-20 { margin-bottom: 20px; }
 .flex-row { display: flex; align-items: center; gap: 8px; }
 .empty { text-align: center; padding: 24px; color: #9ca3af; font-size: 12px; }
-
-/* LIVE PANEL */
-.live-item { display: flex; gap: 10px; padding: 11px 16px; border-bottom: 1px solid #f3f4f6; align-items: flex-start; }
-.live-item:last-child { border-bottom: none; }
-.live-item:hover { background: #fafafa; }
-.live-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-.live-subject { font-size: 12.5px; font-weight: 600; color: #111827; line-height: 1.4; text-decoration: none; }
-.live-subject:hover { color: #6366f1; }
-.live-meta { font-size: 11px; color: #9ca3af; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
-.live-unread .live-subject { color: #f43f5e; }
-.live-unread .live-dot { background: #f43f5e; }
-.live-cal-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: #ede9fe; color: #5b21b6; white-space: nowrap; }
-.live-today { background: #fff0f3; color: #9f1239; }
 .spin { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.live-refresh-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.live-ts { font-size:11px; color:#9ca3af; }
-.suggest-item { padding:9px 14px; border-bottom:1px solid #f3f4f6; display:flex; gap:10px; align-items:flex-start; font-size:12.5px; }
-.suggest-item:last-child { border-bottom:none; }
+
+/* TOAST */
+#toast { position: fixed; bottom: 24px; right: 24px; background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 12px; font-weight: 600; z-index: 999; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+#toast.show { opacity: 1; }
 
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -245,12 +246,22 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
 </head>
 <body>
 
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div class="ld-pop">POP.</div>
+  <div class="ld-txt">Cargando Centro de Control...</div>
+  <div class="ld-bar"><div class="ld-bar-inner"></div></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
 <!-- SIDEBAR -->
 <aside id="sb">
   <div class="sb-logo">
     <div class="sb-pop">POP.</div>
     <div class="sb-title">Centro de Control</div>
-    <div class="sb-week">Semana W24 · Jun 2026</div>
+    <div class="sb-week" id="sb-week-label">Cargando...</div>
   </div>
   <nav class="sb-nav">
     <div class="sb-sec-label">Vistas</div>
@@ -270,10 +281,6 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
     <div class="sb-item" id="nav-calendario" onclick="goto('calendario')">
       <span class="sb-icon">◫</span> Calendario
     </div>
-    <div class="sb-item" id="nav-live" onclick="goto('live')">
-      <span class="sb-icon">📡</span> Live
-      <span class="sb-badge" id="badge-unread" style="display:none;background:#6366f1">0</span>
-    </div>
     <div class="sb-item" id="nav-ajustes" onclick="goto('ajustes')">
       <span class="sb-icon">⚙</span> Ajustes
     </div>
@@ -289,7 +296,7 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
   <div id="topbar">
     <div id="tb-left">
       <div id="tb-title">Dashboard</div>
-      <div id="tb-sub">Semana W24 · 11 jun 2026</div>
+      <div id="tb-sub">Cargando...</div>
     </div>
     <div id="tb-actions">
       <button class="btn btn-ghost btn-sm" onclick="exportTxt()">↓ Resumen</button>
@@ -303,7 +310,6 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
     <section id="s-dashboard" class="section active">
       <div class="kpi-row" id="kpi-row"></div>
 
-      <!-- Charts -->
       <div class="grid-3 mb-20">
         <div class="card">
           <div class="card-head"><div class="card-title">📊 Por Área</div></div>
@@ -319,7 +325,6 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
         </div>
       </div>
 
-      <!-- TOP + Paradas widgets -->
       <div class="grid-2 mb-20">
         <div class="card">
           <div class="card-head">
@@ -337,7 +342,6 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
         </div>
       </div>
 
-      <!-- Bloqueados + Próximos -->
       <div class="grid-2 mb-20">
         <div class="card">
           <div class="card-head"><div class="card-title">🔴 Pdte. aprobación Enrique</div></div>
@@ -349,7 +353,6 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
         </div>
       </div>
 
-      <!-- Prioridades por persona -->
       <div class="card">
         <div class="card-head"><div class="card-title">🎯 Top Prioridades por Persona</div></div>
         <div style="padding:14px"><div class="prio-grid" id="prio-by-person"></div></div>
@@ -358,9 +361,18 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
 
     <!-- KANBAN -->
     <section id="s-kanban" class="section">
-      <div class="view-toggle">
-        <button class="vt-btn active" id="kb-by-resp" onclick="setKbView('responsable')">Por Responsable</button>
-        <button class="vt-btn" id="kb-by-area" onclick="setKbView('area')">Por Área</button>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="view-toggle" style="margin-bottom:0">
+          <button class="vt-btn active" id="kb-by-resp" onclick="setKbView('responsable')">Por Responsable</button>
+          <button class="vt-btn" id="kb-by-area" onclick="setKbView('area')">Por Área</button>
+          <button class="vt-btn" id="kb-by-estado" onclick="setKbView('estado')">Por Estado</button>
+        </div>
+        <div class="kb-sort-row">
+          <span style="font-size:11px;color:#9ca3af;font-weight:700">Ordenar:</span>
+          <button class="kb-sort-btn active" id="ks-prioridad" onclick="setKbSort('prioridad')">Prioridad</button>
+          <button class="kb-sort-btn" id="ks-fecha" onclick="setKbSort('fecha')">Fecha</button>
+          <button class="kb-sort-btn" id="ks-estado" onclick="setKbSort('estado')">Estado</button>
+        </div>
       </div>
       <div class="kb-wrap" id="kb-wrap"></div>
     </section>
@@ -419,6 +431,9 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
             <input type="date" class="finput" id="minuta-date" style="width:100%;margin-bottom:14px">
             <label>✎ Notas de la reunión</label>
             <textarea class="minuta-ta" id="minuta-ta" placeholder="Escribe aquí los acuerdos, notas y pendientes de la junta...&#10;&#10;Asistentes:&#10;Tema:&#10;Acuerdos:&#10;Pendientes:"></textarea>
+            <div style="display:flex;justify-content:flex-end;margin-top:10px">
+              <button class="btn btn-primary" id="save-minuta-btn" onclick="saveMinuta()">💾 Guardar Minuta</button>
+            </div>
           </div>
           <div class="card">
             <div class="card-head"><div class="card-title">⚡ Agregar Tarea Rápida</div></div>
@@ -442,11 +457,20 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
         <div>
           <div class="card mb-16">
             <div class="card-head"><div class="card-title">📋 Tareas agregadas en esta sesión</div></div>
-            <div id="today-tasks" style="padding:14px 16px;min-height:100px"></div>
+            <div id="today-tasks" style="padding:14px 16px;min-height:80px"></div>
           </div>
-          <div class="card">
+          <div class="card mb-16">
             <div class="card-head"><div class="card-title">🔴 Pdte. aprobación Enrique</div></div>
             <div id="minuta-blocked"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">🗂 Archivo de Minutas</div>
+              <span style="font-size:10px;color:#9ca3af" id="arc-count"></span>
+            </div>
+            <div id="minuta-archive" style="padding:12px 14px;max-height:340px;overflow-y:auto">
+              <div class="empty">Cargando...</div>
+            </div>
           </div>
         </div>
       </div>
@@ -473,1002 +497,4 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
       </div>
     </section>
 
-    <!-- LIVE -->
-    <section id="s-live" class="section">
-      <div class="live-refresh-bar">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:2px">Datos en tiempo real desde Microsoft 365</div>
-          <div class="live-ts" id="live-ts">Abre esta pestaña para cargar datos</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="loadLive(true)">↺ Actualizar</button>
-      </div>
-
-      <!-- Sugerencias IA -->
-      <div class="card mb-20" id="suggest-card" style="display:none">
-        <div class="card-head">
-          <div class="card-title">🤖 Tareas sugeridas por IA</div>
-          <span style="font-size:10px;color:#9ca3af">Basado en correos recientes</span>
-        </div>
-        <div id="panel-suggest"></div>
-      </div>
-
-      <div class="grid-2">
-        <!-- Emails radar -->
-        <div class="card">
-          <div class="card-head">
-            <div class="card-title">📬 Radar de Correos</div>
-            <span style="font-size:10px;color:#9ca3af">Correos donde está Enrique · 7 días</span>
-          </div>
-          <div id="panel-email"><div class="empty"><span class="spin">⟳</span> Cargando correos...</div></div>
-        </div>
-        <!-- Calendar -->
-        <div class="card">
-          <div class="card-head">
-            <div class="card-title">📅 Agenda · Próximos 14 días</div>
-            <span id="cal-count" style="font-size:10px;color:#9ca3af"></span>
-          </div>
-          <div id="panel-cal"><div class="empty"><span class="spin">⟳</span> Cargando agenda...</div></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- AJUSTES -->
-    <section id="s-ajustes" class="section">
-      <div class="grid-3">
-
-        <!-- Áreas -->
-        <div class="card">
-          <div class="card-head"><div class="card-title">🏢 Áreas</div></div>
-          <div class="cfg-list" id="cfg-areas-list"></div>
-          <div class="cfg-add-row">
-            <input class="cfg-input" id="cfg-area-new" placeholder="Nueva área...">
-            <button class="btn btn-primary btn-sm" onclick="addCfgItem('areas')">+ Add</button>
-          </div>
-        </div>
-
-        <!-- Responsables -->
-        <div class="card">
-          <div class="card-head"><div class="card-title">👤 Responsables</div></div>
-          <div class="cfg-list" id="cfg-resp-list"></div>
-          <div class="cfg-add-row">
-            <input class="cfg-input" id="cfg-resp-new" placeholder="Nombre del responsable...">
-            <button class="btn btn-primary btn-sm" onclick="addCfgItem('resp')">+ Add</button>
-          </div>
-        </div>
-
-        <!-- Tipos -->
-        <div class="card">
-          <div class="card-head"><div class="card-title">🏷️ Tipos de Tarea</div></div>
-          <div class="cfg-list" id="cfg-tipos-list"></div>
-          <div class="cfg-add-row">
-            <input class="cfg-input" id="cfg-tipo-new" placeholder="Nuevo tipo...">
-            <button class="btn btn-primary btn-sm" onclick="addCfgItem('tipos')">+ Add</button>
-          </div>
-        </div>
-
-      </div>
-      <div style="margin-top:20px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;font-size:12.5px;color:#92400e;line-height:1.6">
-        <strong>💡 Nota:</strong> Los cambios aquí se reflejan en todos los selectores del sistema (nueva tarea, lista, minuta). Los datos se reinician al recargar la página ya que esta es una versión prototipo.
-      </div>
-    </section>
-
-  </div>
-</main>
-
-<!-- MODAL ADD/EDIT -->
-<div class="overlay" id="modal-bg">
-  <div class="modal">
-    <div class="m-head">
-      <h2 id="modal-title">Nueva Tarea</h2>
-      <button class="x-btn" onclick="closeModal()">×</button>
-    </div>
-    <div class="m-body">
-      <input type="hidden" id="m-id">
-      <div class="fg">
-        <label class="flabel">Tarea *</label>
-        <input type="text" class="finput" id="m-titulo" placeholder="Descripción de la tarea...">
-      </div>
-      <div class="frow">
-        <div><label class="flabel">Área</label><select class="fselect" id="m-area"></select></div>
-        <div><label class="flabel">Responsable</label><select class="fselect" id="m-resp"></select></div>
-      </div>
-      <div class="frow">
-        <div><label class="flabel">Prioridad</label>
-          <select class="fselect" id="m-prio"><option value="">—</option><option>Alta</option><option>Media</option><option>Baja</option></select>
-        </div>
-        <div><label class="flabel">Estado</label>
-          <select class="fselect" id="m-estado">
-            <option>Pendiente</option><option>En proceso</option>
-            <option>Pdte. aprobación Enrique</option>
-            <option>Completado</option><option>Rutinario</option><option>Cancelado</option>
-          </select>
-        </div>
-      </div>
-      <div class="frow">
-        <div><label class="flabel">Fecha límite</label><input type="date" class="finput" id="m-fecha"></div>
-        <div><label class="flabel">Tipo</label><select class="fselect" id="m-tipo"></select></div>
-      </div>
-      <div class="frow">
-        <div>
-          <label class="flabel">⭐ TOP Semana</label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;background:#fffbeb;border-radius:7px;border:1px solid #fde68a">
-            <input type="checkbox" id="m-top" style="width:16px;height:16px"> Marcar como prioridad de la semana
-          </label>
-        </div>
-        <div>
-          <label class="flabel">🚩 Parada por Enrique</label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;background:#fff1f2;border-radius:7px;border:1px solid #fecdd3">
-            <input type="checkbox" id="m-flag" style="width:16px;height:16px"> Requiere acción de Enrique
-          </label>
-        </div>
-      </div>
-      <div class="fg">
-        <label class="flabel">Notas</label>
-        <textarea class="ftextarea" id="m-notas" placeholder="Contexto, proveedores, links relevantes..."></textarea>
-      </div>
-    </div>
-    <div class="m-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveTask()">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- DETAIL MODAL -->
-<div class="overlay" id="detail-bg">
-  <div class="modal" style="width:480px">
-    <div class="m-head">
-      <h2 id="d-title" style="max-width:360px;line-height:1.3;font-size:14px"></h2>
-      <button class="x-btn" onclick="closeDetail()">×</button>
-    </div>
-    <div class="m-body" id="d-body"></div>
-    <div class="m-foot">
-      <button class="btn btn-ghost" onclick="closeDetail()">Cerrar</button>
-      <button class="btn btn-primary" id="d-edit-btn">✎ Editar</button>
-    </div>
-  </div>
-</div>
-
-<script>
-// ══ STATIC CONFIG ══
-const RESP_BASE = {
-  'Enrique':     { color:'#10b981', bg:'#d1fae5', text:'#065f46', init:'E'  },
-  'Gaby':        { color:'#f43f5e', bg:'#ffe4e6', text:'#9f1239', init:'G'  },
-  'Practicante': { color:'#f59e0b', bg:'#fef3c7', text:'#78350f', init:'P'  },
-  'Luis':        { color:'#f97316', bg:'#ffedd5', text:'#9a3412', init:'L'  },
-  'Osvaldo':     { color:'#6366f1', bg:'#e0e7ff', text:'#3730a3', init:'O'  },
-  'Erick':       { color:'#14b8a6', bg:'#ccfbf1', text:'#134e4a', init:'Er' },
-};
-let RESP = {...RESP_BASE};
-
-const AREA_C_BASE = {
-  'Director':'#6366f1','Mkt. Tradicional':'#ec4899','Mkt. Digital':'#f97316',
-  'Ventas':'#10b981','Brokers':'#f59e0b','Chief of Staff':'#f43f5e',
-  'Pop Gallery':'#8b5cf6','POP Corporativo':'#0ea5e9','Proyectos':'#64748b',
-};
-let AREA_C = {...AREA_C_BASE};
-
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-const TODAY  = '2026-06-11';
-
-// ══ DYNAMIC CONFIG ══
-let CONFIG_AREAS = Object.keys(AREA_C_BASE);
-let CONFIG_RESP  = Object.keys(RESP_BASE);
-let CONFIG_TIPOS = ['Tarea general','Entregable','Junta a agendar','Rutinario','Pendiente personal'];
-
-let nextId = 71;
-let kbView = 'responsable';
-let calYear = 2026, calMonth = 5;
-let sessionTasks = [];
-let currentSection = 'dashboard';
-let charts = {};
-let qaFlagOn = false;
-let qaTopOn  = false;
-
-// ══ DATA ══
-let TASKS = [
-  // DIRECTOR – Enrique
-  {id:1, titulo:'Formato de Comisión Lev Cap Excel', area:'Director', responsable:'Enrique', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Entregable', notas:'', top:true, flag:true},
-  {id:2, titulo:'Customer Journey', area:'Director', responsable:'Enrique', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Entregable', notas:'', top:true, flag:true},
-  {id:3, titulo:'Dinero Gerardo Sada – Estado de cuenta', area:'Director', responsable:'Enrique', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:4, titulo:'Ver con Memo y Jorge – Esquema 5-15', area:'Director', responsable:'Enrique', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Junta a agendar', notas:'', top:false, flag:false},
-  {id:5, titulo:'Diseño piso 35', area:'Director', responsable:'Enrique', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:6, titulo:'RUTA FIFA IDEAS SHOWROOM', area:'Director', responsable:'Enrique', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:7, titulo:'Proyecto Larisso – correo Saúl', area:'Director', responsable:'Enrique', prioridad:'Media', estado:'En proceso', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:8, titulo:'Comunicado de combinar', area:'Director', responsable:'Enrique', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:9, titulo:'Horarios / Acuerdos Erick', area:'Director', responsable:'Enrique', prioridad:'Media', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Junta a agendar', notas:'', top:false, flag:false},
-  // VENTAS – Osvaldo
-  {id:10, titulo:'Listado de plantillas – dividido ut/mkt', area:'Ventas', responsable:'Osvaldo', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'2026-05-14', tipo:'Entregable', notas:'', top:true, flag:true},
-  {id:11, titulo:'Esquema de promociones anual', area:'Ventas', responsable:'Osvaldo', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'2026-04-16', tipo:'Entregable', notas:'', top:false, flag:true},
-  // BROKERS – Erick
-  {id:12, titulo:'Plan Nacional de Brokers', area:'Brokers', responsable:'Erick', prioridad:'Alta', estado:'En proceso', fecha:'2026-05-15', tipo:'Entregable', notas:'', top:true, flag:false},
-  {id:13, titulo:'Carpeta Brokers', area:'Brokers', responsable:'Erick', prioridad:'Media', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:true},
-  {id:14, titulo:'Capacitaciones brokers', area:'Brokers', responsable:'Erick', prioridad:'Baja', estado:'Rutinario', fecha:'', tipo:'Rutinario', notas:'', top:false, flag:false},
-  {id:15, titulo:'Comparación Calendly', area:'Brokers', responsable:'Erick', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  // MKT. TRADICIONAL (heredado Andrea)
-  {id:16, titulo:'Customer Journey – Mkt. Trad.', area:'Mkt. Tradicional', responsable:'Gaby', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Entregable', notas:'Heredado de Andrea', top:true, flag:false},
-  {id:17, titulo:'Comprobantes de Larissa', area:'Mkt. Tradicional', responsable:'Practicante', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:18, titulo:'Locales Comerciales PTK sin techo', area:'Mkt. Tradicional', responsable:'Practicante', prioridad:'Media', estado:'En proceso', fecha:'', tipo:'Tarea general', notas:'Renders en proceso', top:false, flag:false},
-  {id:19, titulo:'Cargar facturas pagos mayo 2026', area:'Mkt. Tradicional', responsable:'Practicante', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:20, titulo:'Pop Gallery – Mkt. Trad.', area:'Mkt. Tradicional', responsable:'Practicante', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  // MKT. DIGITAL – Luis
-  {id:21, titulo:'Profet – Dashboard actualizado', area:'Mkt. Digital', responsable:'Luis', prioridad:'Media', estado:'En proceso', fecha:'2026-05-06', tipo:'Entregable', notas:'', top:false, flag:false},
-  {id:22, titulo:'WISE – Seguimiento pago', area:'Mkt. Digital', responsable:'Luis', prioridad:'Alta', estado:'Pendiente', fecha:'2026-05-08', tipo:'Tarea general', notas:'', top:true, flag:false},
-  {id:23, titulo:'META ADS', area:'Mkt. Digital', responsable:'Luis', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:24, titulo:'WhatsApp Business', area:'Mkt. Digital', responsable:'Luis', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:25, titulo:'Pago WISE – fechas compromiso pipeline', area:'Mkt. Digital', responsable:'Luis', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:true},
-  {id:26, titulo:'Auditar leads BVRO (c/2 días)', area:'Mkt. Digital', responsable:'Luis', prioridad:'Media', estado:'Rutinario', fecha:'', tipo:'Rutinario', notas:'', top:false, flag:false},
-  {id:27, titulo:'Junta con equipo de ventas', area:'Mkt. Digital', responsable:'Luis', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Junta a agendar', notas:'', top:false, flag:false},
-  {id:28, titulo:'Manera de auditar BVRO / Leads', area:'Mkt. Digital', responsable:'Luis', prioridad:'Alta', estado:'Pendiente', fecha:'', tipo:'Entregable', notas:'', top:true, flag:false},
-  // CHIEF OF STAFF – Gaby
-  {id:29, titulo:'Celular TYCSA ERG', area:'Chief of Staff', responsable:'Gaby', prioridad:'Alta', estado:'En proceso', fecha:'2026-06-12', tipo:'Tarea general', notas:'', top:true, flag:false},
-  {id:30, titulo:'Reembolso Enrique Seguro', area:'Chief of Staff', responsable:'Gaby', prioridad:'Alta', estado:'En proceso', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:31, titulo:'Insumos del Showroom', area:'Chief of Staff', responsable:'Gaby', prioridad:'Media', estado:'En proceso', fecha:'2026-06-03', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:32, titulo:'Presentación TPK confirmar', area:'Chief of Staff', responsable:'Gaby', prioridad:'Alta', estado:'Pendiente', fecha:'2026-06-04', tipo:'Entregable', notas:'', top:true, flag:false},
-  {id:33, titulo:'Revisión política ventas con ER', area:'Chief of Staff', responsable:'Gaby', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'2026-06-04', tipo:'Junta a agendar', notas:'', top:false, flag:false},
-  {id:34, titulo:'Revisar domiciliación: Bellpay', area:'Chief of Staff', responsable:'Gaby', prioridad:'Media', estado:'Pdte. aprobación Enrique', fecha:'2026-06-04', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:35, titulo:'POP INV → POP', area:'Chief of Staff', responsable:'Gaby', prioridad:'Media', estado:'Pendiente', fecha:'2026-06-27', tipo:'Tarea general', notas:'', top:false, flag:true},
-  {id:36, titulo:'Info Brenda Serfimex', area:'Chief of Staff', responsable:'Gaby', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:37, titulo:'Receta + Cotización medicamentos', area:'Chief of Staff', responsable:'Gaby', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:38, titulo:'POPSYS9 – Pedir ERG final', area:'Chief of Staff', responsable:'Gaby', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:39, titulo:'Profes Soccer y Tennis LaP', area:'Chief of Staff', responsable:'Gaby', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:40, titulo:'Renta carrito Golf LaP', area:'Chief of Staff', responsable:'Gaby', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:41, titulo:'ZOHO / CAPI', area:'Chief of Staff', responsable:'Gaby', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  // POP CORPORATIVO
-  {id:42, titulo:'Campañas BVRÓ – Moodboard nueva dirección', area:'POP Corporativo', responsable:'Gaby', prioridad:'Media', estado:'En proceso', fecha:'', tipo:'Tarea general', notas:'May(2) Jun(4) – feedback en carpeta compartida', top:false, flag:false},
-  {id:43, titulo:'Cotización Sitios Web POP', area:'POP Corporativo', responsable:'Gaby', prioridad:'Media', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Entregable', notas:'Sin diseño gráfico – baja $10k+IVA', top:false, flag:true},
-  {id:44, titulo:'Arquitectura de Marca POP', area:'POP Corporativo', responsable:'Enrique', prioridad:'Baja', estado:'En proceso', fecha:'', tipo:'Entregable', notas:'En hold con Larissa', top:false, flag:false},
-  {id:45, titulo:'Rediseño páginas Web + lanzamiento 3 marcas', area:'POP Corporativo', responsable:'Enrique', prioridad:'Alta', estado:'En proceso', fecha:'', tipo:'Entregable', notas:'Actualizar Gantt', top:false, flag:false},
-  {id:46, titulo:'Hat clips JVV – Pago finiquito Fork Caps', area:'POP Corporativo', responsable:'Practicante', prioridad:'Alta', estado:'En proceso', fecha:'2026-06-09', tipo:'Tarea general', notas:'Raúl Castro +52 81 3402 7686', top:false, flag:false},
-  {id:47, titulo:'Tazas POP – Anticipo programación pago', area:'POP Corporativo', responsable:'Practicante', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Acento Publicidad – pendiente muestras', top:false, flag:false},
-  {id:48, titulo:'Revisión Moodboard RS + calendario Jun', area:'POP Corporativo', responsable:'Luis', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Entregable', notas:'Revisar con Nayeli BVRÓ', top:false, flag:false},
-  {id:49, titulo:'Tarjetas Presentación Ventas – Autorizar muestra', area:'Proyectos', responsable:'Gaby', prioridad:'Alta', estado:'Pendiente', fecha:'', tipo:'Entregable', notas:'Zuma Impresores – Lynx 280gr', top:false, flag:false},
-  {id:50, titulo:'Recepción muestra gafetes VINART', area:'POP Corporativo', responsable:'Practicante', prioridad:'Media', estado:'En proceso', fecha:'', tipo:'Tarea general', notas:'Solicitar a Pancho – ya en producción', top:false, flag:false},
-  // PROYECTOS
-  {id:51, titulo:'Liberación renders PTK – Render Inc.', area:'Proyectos', responsable:'Enrique', prioridad:'Alta', estado:'Pendiente', fecha:'', tipo:'Entregable', notas:'Solicitar altas proveedor → actualizar presentaciones', top:false, flag:false},
-  {id:52, titulo:'Autorización O.T. Google ATK y PTK', area:'Proyectos', responsable:'Enrique', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Entregable', notas:'SP urgente + firmas → fondeo tarjetas', top:false, flag:true},
-  {id:53, titulo:'Instalación Lona Mesh – torre grúa', area:'Proyectos', responsable:'Gaby', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Coordinar con Kimie Monier y Humberto Delgado', top:false, flag:false},
-  {id:54, titulo:'Revisión encuestas Compra/No compra', area:'Proyectos', responsable:'Gaby', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Entregable', notas:'Word enviado por correo', top:false, flag:false},
-  {id:55, titulo:'Alta 3 encuestas en Zoho Survey', area:'Proyectos', responsable:'Practicante', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:56, titulo:'Liberar fichas instrucciones depósito clientes', area:'Proyectos', responsable:'Gaby', prioridad:'Alta', estado:'Pendiente', fecha:'', tipo:'Entregable', notas:'Enviadas por correo → cargar carpeta Ventas', top:true, flag:false},
-  {id:57, titulo:'Promoción Mundial – 4 propuestas chat MKT', area:'Proyectos', responsable:'Practicante', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'', top:false, flag:false},
-  {id:58, titulo:'Customer Journey – Implementar mejoras', area:'Proyectos', responsable:'Gaby', prioridad:'Alta', estado:'En proceso', fecha:'', tipo:'Entregable', notas:'Comentarios doc ER enviados. Bajar info a equipo', top:true, flag:false},
-  {id:59, titulo:'Customer Journey – Lista compras Showroom', area:'Proyectos', responsable:'Gaby', prioridad:'Alta', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Revisión scouting realizado. Autorizar compras', top:true, flag:false},
-  {id:60, titulo:'Manual Propietario + Ops ÁTIKO', area:'Proyectos', responsable:'Enrique', prioridad:'Alta', estado:'En proceso', fecha:'', tipo:'Entregable', notas:'Esqueletos diseñados por Larissa – en hold', top:false, flag:false},
-  {id:61, titulo:'Experiencia entrega unidades – cotizar materiales', area:'Proyectos', responsable:'Practicante', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Materiales definidos + propuesta botella', top:false, flag:false},
-  {id:62, titulo:'Instalar lona Capi – barda ÁTIKO', area:'Proyectos', responsable:'Gaby', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Entregar a Humberto. Lona en bodega MKT', top:false, flag:false},
-  {id:63, titulo:'Stickers carros – 100pz 10 modelos', area:'Proyectos', responsable:'Practicante', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Diseños Larissa listos. $1,500 mxn', top:false, flag:false},
-  {id:64, titulo:'Hablar con Larissa – definir fecha fin alcance', area:'Proyectos', responsable:'Enrique', prioridad:'Alta', estado:'Pendiente', fecha:'', tipo:'Junta a agendar', notas:'Todas las solicitudes en HOLD hasta definir', top:false, flag:false},
-  // POP GALLERY
-  {id:65, titulo:'Fichas obra colgada Casa Pop', area:'Pop Gallery', responsable:'Practicante', prioridad:'Baja', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Después de que Rosy pinte todos los muros', top:false, flag:false},
-  {id:66, titulo:'Compra pieza Polack – Pdte. firma ERG', area:'Pop Gallery', responsable:'Gaby', prioridad:'Alta', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Tarea general', notas:'Proveedor dado de alta. Pendiente transferencia', top:false, flag:true},
-  {id:67, titulo:'Alex Fregoso – Autorización evento apertura', area:'Pop Gallery', responsable:'Enrique', prioridad:'Media', estado:'Pdte. aprobación Enrique', fecha:'', tipo:'Junta a agendar', notas:'10 invitados, él cubre bebidas. Lunes 6-8pm', top:false, flag:false},
-  {id:68, titulo:'Evento clausura Alex Fregoso', area:'Pop Gallery', responsable:'Gaby', prioridad:'Alta', estado:'Pendiente', fecha:'2026-08-20', tipo:'Junta a agendar', notas:'Fecha tentativa – artista muy a la expectativa', top:false, flag:false},
-  {id:69, titulo:'Programar jul/ago artista – contenido', area:'Pop Gallery', responsable:'Gaby', prioridad:'Media', estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Campaña orgánica junio ya programada', top:false, flag:false},
-  {id:70, titulo:'Publicar cápsulas 2 y 3 artista actual', area:'Pop Gallery', responsable:'Luis', prioridad:'Media', estado:'En proceso', fecha:'', tipo:'Tarea general', notas:'Videos en proceso con Larissa', top:false, flag:false},
-];
-
-// ══ HELPERS ══
-const active = () => TASKS.filter(t => t.estado !== 'Completado' && t.estado !== 'Cancelado');
-const isOverdue = d => d && d < TODAY;
-const fmtDate = d => { if(!d) return ''; const [y,m,day]=d.split('-'); return `${day}/${m}`; };
-const estadoCls = e => ({'Pendiente':'estado-pendiente','En proceso':'estado-proceso','Pdte. aprobación Enrique':'estado-aprobacion','Completado':'estado-completado','Rutinario':'estado-rutinario','Cancelado':'estado-cancelado'})[e]||'estado-pendiente';
-const prioBadge = p => p ? `<span class="badge p-${p}">${p}</span>` : '';
-const respChip = r => {
-  const c = RESP[r]||{color:'#94a3b8',bg:'#f1f5f9',text:'#6b7280',init:r?r[0]:'?'};
-  return `<span class="rchip" style="background:${c.bg};color:${c.text}"><span class="ravatar" style="background:${c.color};color:#fff">${c.init}</span>${r}</span>`;
-};
-function mkOptions(arr, sel='', placeholder='— Seleccionar —') {
-  return `<option value="">${placeholder}</option>` + arr.map(v=>`<option${sel===v?' selected':''}>${v}</option>`).join('');
-}
-function refreshDropdowns() {
-  // Modal dropdowns
-  const ma = document.getElementById('m-area'); if(ma) ma.innerHTML = mkOptions(CONFIG_AREAS, ma.value);
-  const mr = document.getElementById('m-resp'); if(mr) mr.innerHTML = mkOptions(CONFIG_RESP, mr.value);
-  const mt = document.getElementById('m-tipo'); if(mt) mt.innerHTML = mkOptions(CONFIG_TIPOS, mt.value);
-  // Filter dropdowns
-  const fr = document.getElementById('f-resp');
-  if(fr) { const v=fr.value; fr.innerHTML='<option value="">Todos los responsables</option>'+CONFIG_RESP.map(r=>`<option${v===r?' selected':''}>${r}</option>`).join(''); }
-  const fa = document.getElementById('f-area');
-  if(fa) { const v=fa.value; fa.innerHTML='<option value="">Todas las áreas</option>'+CONFIG_AREAS.map(a=>`<option${v===a?' selected':''}>${a}</option>`).join(''); }
-  // Minuta quick task
-  const qr = document.getElementById('qt-resp'); if(qr) qr.innerHTML = mkOptions(CONFIG_RESP,'','Responsable');
-  const qa = document.getElementById('qt-area'); if(qa) qa.innerHTML = mkOptions(CONFIG_AREAS,'Chief of Staff','Área');
-}
-
-// ══ NAVIGATION ══
-function goto(sec) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
-  document.getElementById('s-'+sec).classList.add('active');
-  document.getElementById('nav-'+sec).classList.add('active');
-  currentSection = sec;
-  const titles = {
-    dashboard:['Dashboard','Resumen semanal · Área Comercial'],
-    kanban:['Kanban','Vista de tablero'],
-    lista:['Lista completa','Todos los pendientes con filtros'],
-    minuta:['Minuta','Notas de reuniones y tareas rápidas'],
-    calendario:['Calendario','Vista mensual de pendientes'],
-    live:['📡 Live','Correos y agenda desde Microsoft 365'],
-    ajustes:['Ajustes','Configuración del sistema'],
-  };
-  const t = titles[sec]||[sec,''];
-  document.getElementById('tb-title').textContent = t[0];
-  document.getElementById('tb-sub').textContent = t[1];
-  const renders = {dashboard:renderDashboard,kanban:renderKanban,lista:renderLista,minuta:renderMinuta,calendario:renderCalendario,live:()=>loadLive(false),ajustes:renderAjustes};
-  if(renders[sec]) renders[sec]();
-}
-
-// ══ DASHBOARD ══
-function renderDashboard() {
-  const act = active();
-  const blocked = TASKS.filter(t => t.estado === 'Pdte. aprobación Enrique');
-  const overdue = act.filter(t => isOverdue(t.fecha));
-  const soon = act.filter(t => t.fecha && !isOverdue(t.fecha) && t.fecha <= '2026-06-18');
-  const done = TASKS.filter(t => t.estado === 'Completado');
-  const topTasks = act.filter(t => t.top);
-  const flagTasks = act.filter(t => t.flag);
-
-  document.getElementById('badge-blocked').textContent = flagTasks.length || blocked.length;
-
-  document.getElementById('kpi-row').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Activos</div><div class="kpi-num">${act.length}</div><div class="kpi-hint">${TASKS.length} totales</div></div>
-    <div class="kpi-card kpi-danger"><div class="kpi-label">Paradas Enrique</div><div class="kpi-num">${flagTasks.length}</div><div class="kpi-hint">Con 🚩</div></div>
-    <div class="kpi-card kpi-warn"><div class="kpi-label">Vencidos</div><div class="kpi-num">${overdue.length}</div><div class="kpi-hint">Fecha pasada</div></div>
-    <div class="kpi-card"><div class="kpi-label">TOP Semana</div><div class="kpi-num">${topTasks.length}</div><div class="kpi-hint">Con ⭐</div></div>
-    <div class="kpi-card kpi-good"><div class="kpi-label">Completados</div><div class="kpi-num">${done.length}</div><div class="kpi-hint">Total</div></div>
-  `;
-
-  // TOP widget
-  document.getElementById('widget-top').innerHTML = !topTasks.length
-    ? '<div class="empty">Sin tareas ⭐ esta semana</div>'
-    : topTasks.map(t => `
-      <div class="blocked-row" onclick="openDetail(${t.id})">
-        <button class="toggle-btn" onclick="event.stopPropagation();toggleTop(${t.id})" title="Quitar de TOP" style="color:#f59e0b">⭐</button>
-        <div style="flex:1"><div class="blocked-title">${t.titulo}</div><div class="blocked-meta">${t.responsable} · ${t.area}</div></div>
-        ${prioBadge(t.prioridad)}
-      </div>`).join('');
-
-  // FLAG widget
-  document.getElementById('widget-flag').innerHTML = !flagTasks.length
-    ? '<div class="empty">✅ Sin paradas activas</div>'
-    : flagTasks.map(t => `
-      <div class="blocked-row" onclick="openDetail(${t.id})">
-        <button class="toggle-btn" onclick="event.stopPropagation();toggleFlag(${t.id})" title="Quitar parada" style="color:#ef4444">🚩</button>
-        <div style="flex:1"><div class="blocked-title">${t.titulo}</div><div class="blocked-meta">${t.responsable} · ${t.area}</div></div>
-        ${prioBadge(t.prioridad)}
-      </div>`).join('');
-
-  // Pdte. aprobación
-  const bl = document.getElementById('blocked-list');
-  bl.innerHTML = !blocked.length ? '<div class="empty">✅ Sin pendientes</div>'
-    : blocked.slice(0,8).map(t => `
-      <div class="blocked-row" onclick="openDetail(${t.id})">
-        <div style="flex:1"><div class="blocked-title">${t.titulo}</div><div class="blocked-meta">${t.area} · ${t.responsable}</div></div>
-        ${prioBadge(t.prioridad)}
-      </div>`).join('');
-
-  // Upcoming
-  const upItems = [...overdue.sort((a,b)=>a.fecha.localeCompare(b.fecha)), ...act.filter(t=>t.fecha&&!isOverdue(t.fecha)).sort((a,b)=>a.fecha.localeCompare(b.fecha))].slice(0,8);
-  document.getElementById('upcoming-list').innerHTML = !upItems.length ? '<div class="empty">Sin fechas próximas</div>'
-    : upItems.map(t => `
-      <div class="blocked-row" onclick="openDetail(${t.id})">
-        <div style="flex:1"><div class="blocked-title">${t.titulo}</div><div class="blocked-meta">${t.area} · ${t.responsable}</div></div>
-        <div style="font-size:11px;font-weight:700;color:${isOverdue(t.fecha)?'#dc2626':'#6b7280'}">${fmtDate(t.fecha)}</div>
-      </div>`).join('');
-
-  // Priorities by person
-  document.getElementById('prio-by-person').innerHTML = CONFIG_RESP.map(p => {
-    const c = RESP[p]||{color:'#94a3b8',bg:'#f1f5f9',text:'#374151',init:p[0]};
-    const altas = act.filter(t=>t.responsable===p&&t.prioridad==='Alta');
-    const allp  = act.filter(t=>t.responsable===p);
-    return `<div class="prio-card">
-      <div class="prio-card-head">
-        <div class="prio-card-name"><span class="ravatar" style="background:${c.color};color:#fff;width:22px;height:22px;font-size:9px">${c.init}</span>${p}</div>
-        <span class="prio-card-count">${allp.length} activos</span>
-      </div>
-      ${altas.slice(0,3).map(t=>`<div class="prio-item" onclick="openDetail(${t.id})"><div class="prio-item-title">${t.titulo}</div>${t.fecha?`<div class="prio-item-date">${fmtDate(t.fecha)}</div>`:''}</div>`).join('')
-        ||'<div class="prio-item" style="color:#9ca3af;font-style:italic;font-size:11px">Sin altas prioridades</div>'}
-    </div>`;
-  }).join('');
-
-  // Charts (deferred so DOM is ready)
-  setTimeout(renderCharts, 0);
-}
-
-// ══ CHARTS ══
-function renderCharts() {
-  const act = active();
-  const defaults = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } };
-
-  // Chart 1: horizontal bar – by área
-  const aLabels = CONFIG_AREAS.map(a => a.replace('Mkt. ','').replace('POP ','').replace('Corporativo','Corp'));
-  const aData   = CONFIG_AREAS.map(a => act.filter(t=>t.area===a).length);
-  const aColors = CONFIG_AREAS.map(a => AREA_C[a]||'#94a3b8');
-  if(charts.area) { charts.area.destroy(); }
-  const cvA = document.getElementById('c-area');
-  if(cvA) charts.area = new Chart(cvA, { type:'bar', data:{ labels:aLabels, datasets:[{ data:aData, backgroundColor:aColors, borderRadius:4, borderSkipped:false }] },
-    options:{ ...defaults, indexAxis:'y', scales:{ x:{ grid:{display:false}, ticks:{font:{size:10}} }, y:{ ticks:{font:{size:10}} } } } });
-
-  // Chart 2: doughnut – by responsable
-  const rData   = CONFIG_RESP.map(r => act.filter(t=>t.responsable===r).length);
-  const rColors = CONFIG_RESP.map(r => RESP[r]?.color||'#94a3b8');
-  if(charts.resp) { charts.resp.destroy(); }
-  const cvR = document.getElementById('c-resp');
-  if(cvR) charts.resp = new Chart(cvR, { type:'doughnut', data:{ labels:CONFIG_RESP, datasets:[{ data:rData, backgroundColor:rColors, borderWidth:2, borderColor:'#fff' }] },
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{ position:'bottom', labels:{ font:{size:10}, padding:6 } } } } });
-
-  // Chart 3: doughnut – by estado
-  const eLabels = ['Pendiente','En proceso','Pdte. Enrique','Rutinario'];
-  const eKeys   = ['Pendiente','En proceso','Pdte. aprobación Enrique','Rutinario'];
-  const eColors = ['#e5e7eb','#93c5fd','#f9a8d4','#c4b5fd'];
-  const eData   = eKeys.map(e => act.filter(t=>t.estado===e).length);
-  if(charts.est) { charts.est.destroy(); }
-  const cvE = document.getElementById('c-est');
-  if(cvE) charts.est = new Chart(cvE, { type:'doughnut', data:{ labels:eLabels, datasets:[{ data:eData, backgroundColor:eColors, borderWidth:2, borderColor:'#fff' }] },
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{ position:'bottom', labels:{ font:{size:10}, padding:6 } } } } });
-}
-
-function toggleTop(id) {
-  const t = TASKS.find(t=>t.id===id); if(!t) return;
-  t.top = !t.top;
-  if(currentSection==='dashboard') renderDashboard();
-  else if(currentSection==='lista') renderLista();
-}
-function toggleFlag(id) {
-  const t = TASKS.find(t=>t.id===id); if(!t) return;
-  t.flag = !t.flag;
-  updateBadge();
-  if(currentSection==='dashboard') renderDashboard();
-  else if(currentSection==='lista') renderLista();
-}
-
-// ══ KANBAN ══
-function setKbView(v) {
-  kbView = v;
-  document.getElementById('kb-by-resp').classList.toggle('active', v==='responsable');
-  document.getElementById('kb-by-area').classList.toggle('active', v==='area');
-  renderKanban();
-}
-function renderKanban() {
-  const act = active();
-  const groups = kbView==='responsable' ? CONFIG_RESP : CONFIG_AREAS;
-  document.getElementById('kb-wrap').innerHTML = groups.map(g => {
-    const tasks = act.filter(t => kbView==='responsable' ? t.responsable===g : t.area===g)
-      .sort((a,b)=>({Alta:0,Media:1,Baja:2}[a.prioridad]||1)-({Alta:0,Media:1,Baja:2}[b.prioridad]||1));
-    const col = kbView==='responsable' ? (RESP[g]?.color||'#94a3b8') : (AREA_C[g]||'#64748b');
-    return `<div class="kb-col">
-      <div class="kb-head">
-        <div class="kb-col-label"><span style="width:9px;height:9px;border-radius:50%;background:${col};display:inline-block"></span>${g}</div>
-        <span class="kb-count">${tasks.length}</span>
-      </div>
-      <div class="kb-body">
-        ${!tasks.length ? '<div style="font-size:11px;color:#d1d5db;text-align:center;padding:16px">Sin tareas</div>'
-          : tasks.map(t => {
-            const od = isOverdue(t.fecha);
-            return `<div class="kb-card" onclick="openDetail(${t.id})">
-              <div class="kb-card-title">${t.top?'⭐ ':''}${t.flag?'🚩 ':''}${t.titulo}</div>
-              <div class="kb-card-footer">
-                ${prioBadge(t.prioridad)}
-                <span class="kb-area-tag">${kbView==='responsable'?t.area:t.responsable}</span>
-                ${t.fecha?`<span class="kb-date ${od?'':'future'}">${fmtDate(t.fecha)}</span>`:''}
-              </div>
-            </div>`;
-          }).join('')}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ══ LISTA ══
-function renderLista() {
-  const search  = (document.getElementById('f-search')?.value||'').toLowerCase();
-  const fR      = document.getElementById('f-resp')?.value||'';
-  const fA      = document.getElementById('f-area')?.value||'';
-  const fE      = document.getElementById('f-estado')?.value||'';
-  const fP      = document.getElementById('f-prio')?.value||'';
-  const fTop    = document.getElementById('f-top')?.checked;
-  const fFlag   = document.getElementById('f-flag')?.checked;
-
-  const tasks = TASKS.filter(t =>
-    (!search || t.titulo.toLowerCase().includes(search) || (t.notas||'').toLowerCase().includes(search)) &&
-    (!fR || t.responsable===fR) && (!fA || t.area===fA) &&
-    (!fE || t.estado===fE) && (!fP || t.prioridad===fP) &&
-    (!fTop  || t.top) && (!fFlag || t.flag)
-  );
-
-  // Quick-add row
-  const qaRow = `<tr class="qa-row">
-    <td style="min-width:180px">
-      <input id="qa-titulo" placeholder="+ Descripción..." class="qa-input" style="margin-bottom:4px" onkeydown="if(event.key==='Enter')qaAdd()">
-      <select id="qa-area" class="qa-sel">${mkOptions(CONFIG_AREAS,'Chief of Staff','Área...')}</select>
-    </td>
-    <td><select id="qa-resp" class="qa-sel">${mkOptions(CONFIG_RESP,'Gaby','Responsable...')}</select></td>
-    <td><select id="qa-tipo" class="qa-sel">${mkOptions(CONFIG_TIPOS,'Tarea general','Tipo...')}</select></td>
-    <td><select id="qa-prio" class="qa-sel"><option value="">—</option><option>Alta</option><option selected>Media</option><option>Baja</option></select></td>
-    <td><input type="date" id="qa-fecha" class="qa-input" style="width:110px"></td>
-    <td><select id="qa-estado" class="qa-sel"><option selected>Pendiente</option><option>En proceso</option><option>Rutinario</option></select></td>
-    <td style="text-align:center"><button class="toggle-btn" onclick="qaToggleFlag()" id="qa-flag-btn" title="Parada por Enrique" style="color:${qaFlagOn?'#ef4444':'#d1d5db'}">${qaFlagOn?'🚩':'🚩'}</button></td>
-    <td style="text-align:center"><button class="toggle-btn" onclick="qaToggleStar()" id="qa-star-btn" title="TOP semana" style="color:${qaTopOn?'#f59e0b':'#d1d5db'}">${qaTopOn?'⭐':'⭐'}</button></td>
-    <td><input id="qa-notas" placeholder="Notas..." class="qa-input" style="width:100%"></td>
-    <td><button class="btn btn-primary btn-sm" onclick="qaAdd()">+ Add</button></td>
-  </tr>`;
-
-  const dataRows = !tasks.length
-    ? '<tr><td colspan="10" style="text-align:center;padding:24px;color:#9ca3af">Sin resultados</td></tr>'
-    : tasks.map(t => {
-        const od = isOverdue(t.fecha);
-        const flagStyle = `color:${t.flag?'#ef4444':'#d1d5db'};`;
-        const starStyle = `color:${t.top?'#f59e0b':'#d1d5db'};`;
-        return `<tr>
-          <td>
-            <div class="cell-title">${t.titulo}</div>
-            <div class="cell-area" style="color:${AREA_C[t.area]||'#94a3b8'}">${t.area||''}</div>
-          </td>
-          <td>${respChip(t.responsable)}</td>
-          <td><span style="font-size:11px;color:#6b7280">${t.tipo||'—'}</span></td>
-          <td>${prioBadge(t.prioridad)}</td>
-          <td><span style="font-size:12px;font-weight:700;color:${od?'#dc2626':'#6b7280'}">${t.fecha?fmtDate(t.fecha):'—'}</span></td>
-          <td><span class="badge ${estadoCls(t.estado)}">${t.estado}</span></td>
-          <td style="text-align:center"><button class="toggle-btn" onclick="toggleFlag(${t.id})" title="${t.flag?'Quitar parada':'Marcar como parada Enrique'}" style="${flagStyle}">🚩</button></td>
-          <td style="text-align:center"><button class="toggle-btn" onclick="toggleTop(${t.id})" title="${t.top?'Quitar de TOP':'Marcar como TOP semana'}" style="${starStyle}">⭐</button></td>
-          <td><span class="cell-notes">${t.notas||'—'}</span></td>
-          <td><div style="display:flex;gap:2px">
-            <button class="btn-icon" onclick="openDetail(${t.id})" title="Ver">👁</button>
-            <button class="btn-icon" onclick="openModal(${t.id})" title="Editar">✎</button>
-            ${t.estado!=='Completado'?`<button class="btn-icon" onclick="markDone(${t.id})" title="Completar" style="color:#10b981">✓</button>`:''}
-          </div></td>
-        </tr>`;
-      }).join('');
-
-  document.getElementById('lista-tbody').innerHTML = qaRow + dataRows;
-  document.getElementById('lista-count').textContent = `${tasks.length} tarea${tasks.length!==1?'s':''} mostrada${tasks.length!==1?'s':''}`;
-}
-
-function qaToggleFlag() {
-  qaFlagOn = !qaFlagOn;
-  const btn = document.getElementById('qa-flag-btn');
-  if(btn) btn.style.color = qaFlagOn ? '#ef4444' : '#d1d5db';
-}
-function qaToggleStar() {
-  qaTopOn = !qaTopOn;
-  const btn = document.getElementById('qa-star-btn');
-  if(btn) btn.style.color = qaTopOn ? '#f59e0b' : '#d1d5db';
-}
-function qaAdd() {
-  const titulo = (document.getElementById('qa-titulo')?.value||'').trim();
-  if(!titulo) { document.getElementById('qa-titulo')?.focus(); return; }
-  const t = {
-    id: nextId++,
-    titulo,
-    area:         document.getElementById('qa-area')?.value   || 'Chief of Staff',
-    responsable:  document.getElementById('qa-resp')?.value   || 'Gaby',
-    tipo:         document.getElementById('qa-tipo')?.value   || 'Tarea general',
-    prioridad:    document.getElementById('qa-prio')?.value   || 'Media',
-    fecha:        document.getElementById('qa-fecha')?.value  || '',
-    estado:       document.getElementById('qa-estado')?.value || 'Pendiente',
-    notas:        document.getElementById('qa-notas')?.value  || '',
-    top:  qaTopOn,
-    flag: qaFlagOn,
-  };
-  TASKS.push(t);
-  sessionTasks.push(t);
-  qaFlagOn = false;
-  qaTopOn  = false;
-  updateBadge();
-  renderLista();
-}
-
-// ══ MINUTA ══
-function renderMinuta() {
-  if(!document.getElementById('minuta-date').value) document.getElementById('minuta-date').value = TODAY;
-  refreshDropdowns();
-  const tt = document.getElementById('today-tasks');
-  tt.innerHTML = !sessionTasks.length
-    ? '<div style="color:#9ca3af;font-size:12px">No has agregado tareas en esta sesión.</div>'
-    : sessionTasks.map(t => `
-        <div style="padding:8px 0;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${RESP[t.responsable]?.color||'#94a3b8'};display:inline-block;flex-shrink:0"></span>
-          <div style="flex:1;font-size:12px;font-weight:500">${t.titulo}</div>
-          ${prioBadge(t.prioridad)}
-        </div>`).join('');
-  const blocked = active().filter(t=>t.estado==='Pdte. aprobación Enrique');
-  document.getElementById('minuta-blocked').innerHTML = blocked.slice(0,6).map(t =>
-    `<div class="blocked-row"><div style="flex:1"><div class="blocked-title">${t.titulo}</div><div class="blocked-meta">${t.responsable} · ${t.area}</div></div>${prioBadge(t.prioridad)}</div>`
-  ).join('')||'<div style="padding:12px 16px;color:#9ca3af;font-size:12px">Sin bloqueados</div>';
-}
-function addQuickTask() {
-  const titulo = document.getElementById('qt-titulo').value.trim();
-  if(!titulo) { alert('Escribe una descripción para la tarea'); return; }
-  const t = { id:nextId++, titulo, area:document.getElementById('qt-area').value||'Chief of Staff',
-    responsable:document.getElementById('qt-resp').value||'Gaby',
-    prioridad:document.getElementById('qt-prio').value||'Media',
-    estado:'Pendiente', fecha:document.getElementById('qt-fecha').value||'',
-    tipo:'Tarea general', notas:`Minuta ${document.getElementById('minuta-date').value||TODAY}`,
-    top:false, flag:false };
-  TASKS.push(t); sessionTasks.push(t);
-  document.getElementById('qt-titulo').value = '';
-  renderMinuta(); updateBadge();
-}
-
-// ══ CALENDARIO ══
-function changeMonth(d) {
-  if(d===0){calYear=2026;calMonth=5;}
-  else{calMonth+=d; if(calMonth<0){calMonth=11;calYear--;} if(calMonth>11){calMonth=0;calYear++;}}
-  renderCalendario();
-}
-function renderCalendario() {
-  document.getElementById('cal-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const prevDays = new Date(calYear, calMonth, 0).getDate();
-  let html = DAYS.map(d=>`<div class="cal-dow">${d}</div>`).join('');
-  for(let i=firstDay-1;i>=0;i--) html+=`<div class="cal-cell other-month"><div class="cal-daynum">${prevDays-i}</div></div>`;
-  for(let d=1;d<=daysInMonth;d++){
-    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday=ds===TODAY;
-    const dt=TASKS.filter(t=>t.fecha===ds);
-    html+=`<div class="cal-cell ${isToday?'is-today':''}">
-      <div class="cal-daynum">${d}</div>
-      ${dt.slice(0,3).map(t=>{const c=RESP[t.responsable]||{};return`<div class="cal-ev" style="background:${c.bg||'#f3f4f6'};color:${c.text||'#374151'}" onclick="openDetail(${t.id})" title="${t.titulo}">${t.titulo}</div>`;}).join('')}
-      ${dt.length>3?`<div style="font-size:9px;color:#9ca3af;font-weight:700;padding:1px 5px">+${dt.length-3} más</div>`:''}
-    </div>`;
-  }
-  const trailing=(7-(firstDay+daysInMonth)%7)%7;
-  for(let d=1;d<=trailing;d++) html+=`<div class="cal-cell other-month"><div class="cal-daynum">${d}</div></div>`;
-  document.getElementById('cal-grid').innerHTML=html;
-}
-
-// ══ LIVE DATA ══
-const MCP_EMAIL    = 'mcp__ec563de5-7147-4e60-9568-ac6ca84b7397__outlook_email_search';
-const MCP_CALENDAR = 'mcp__ec563de5-7147-4e60-9568-ac6ca84b7397__outlook_calendar_search';
-
-let liveLoaded = false;
-
-function parseMcpItems(r) {
-  if(!r || r.isError || !r.content) return [];
-  return r.content.map(c => { try { return JSON.parse(c.text); } catch(e) { return null; } }).filter(Boolean);
-}
-
-function fmtLiveDate(iso) {
-  if(!iso) return '';
-  const d = new Date(iso);
-  const now = new Date();
-  const diffH = (now - d) / 3600000;
-  if(diffH < 1)  return 'hace menos de 1h';
-  if(diffH < 24) return `hace ${Math.floor(diffH)}h`;
-  const mm = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  return `${d.getDate()} ${mm[d.getMonth()]}`;
-}
-function fmtEventDate(iso) {
-  if(!iso) return '';
-  const d = new Date(iso);
-  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  const mm   = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  const hhmm = d.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'America/Monterrey'});
-  const todayStr = new Date().toDateString();
-  const isToday  = d.toDateString() === todayStr;
-  const tomorrowStr = new Date(Date.now()+86400000).toDateString();
-  const isTomorrow  = d.toDateString() === tomorrowStr;
-  const label = isToday ? 'Hoy' : isTomorrow ? 'Mañana' : `${days[d.getDay()]} ${d.getDate()} ${mm[d.getMonth()]}`;
-  return { label, hhmm, isToday };
-}
-function senderName(email) {
-  if(!email) return '—';
-  const local = email.split('@')[0];
-  return local.replace(/\./g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-}
-
-async function loadLive(force) {
-  if(liveLoaded && !force) return;
-  liveLoaded = true;
-
-  document.getElementById('panel-email').innerHTML = '<div class="empty"><span class="spin">⟳</span> Cargando correos...</div>';
-  document.getElementById('panel-cal').innerHTML   = '<div class="empty"><span class="spin">⟳</span> Cargando agenda...</div>';
-  document.getElementById('live-ts').textContent   = 'Cargando...';
-
-  try {
-    const [emailR, calR] = await Promise.all([
-      window.cowork.callMcpTool(MCP_EMAIL, {
-        recipient: 'enrique@popinvestments.com',
-        afterDateTime: 'last 7 days',
-        limit: 15
-      }),
-      window.cowork.callMcpTool(MCP_CALENDAR, {
-        query: '*',
-        afterDateTime: 'today',
-        beforeDateTime: 'next 14 days',
-        limit: 20,
-        order: 'oldest'
-      })
-    ]);
-
-    const allEmailItems = parseMcpItems(emailR);
-    const emails = allEmailItems.filter(e => e.id && e.subject);
-    const allCalItems  = parseMcpItems(calR);
-    const events = allCalItems.filter(e => e.id && e.subject);
-
-    renderEmailPanel(emails);
-    renderCalPanel(events);
-
-    const unread = emails.filter(e => !e.isRead).length;
-    const badge = document.getElementById('badge-unread');
-    if(unread > 0) { badge.textContent = unread; badge.style.display = ''; }
-    else badge.style.display = 'none';
-
-    document.getElementById('live-ts').textContent = `Actualizado: ${new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'})}`;
-
-    // IA suggestions (non-blocking)
-    if(emails.length > 0 && window.cowork?.askClaude) {
-      loadSuggestions(emails.slice(0, 8));
-    }
-
-  } catch(err) {
-    document.getElementById('panel-email').innerHTML = `<div class="empty" style="color:#dc2626">Error al cargar correos: ${err.message||err}</div>`;
-    document.getElementById('panel-cal').innerHTML   = `<div class="empty" style="color:#dc2626">Error al cargar agenda</div>`;
-    document.getElementById('live-ts').textContent   = 'Error al cargar datos';
-  }
-}
-
-function renderEmailPanel(emails) {
-  const el = document.getElementById('panel-email');
-  if(!emails.length) { el.innerHTML = '<div class="empty">Sin correos recientes donde esté Enrique</div>'; return; }
-  el.innerHTML = emails.map(e => {
-    const unread = !e.isRead;
-    const dotColor = unread ? '#f43f5e' : '#d1d5db';
-    const name = senderName(e.sender);
-    const preview = (e.summary||'').slice(0,80).replace(/\n/g,' ');
-    return `<div class="live-item ${unread?'live-unread':''}">
-      <div class="live-dot" style="background:${dotColor}"></div>
-      <div style="flex:1;min-width:0">
-        <a class="live-subject" href="${e.webLink}" target="_blank" title="${e.subject}">${e.subject?.slice(0,60)||'(sin asunto)'}${e.hasAttachments?' 📎':''}</a>
-        <div class="live-meta">
-          <span>${name}</span>
-          <span>${fmtLiveDate(e.receivedDateTime)}</span>
-          ${unread?'<span style="color:#f43f5e;font-weight:700">● Sin leer</span>':''}
-        </div>
-        ${preview?`<div style="font-size:11px;color:#9ca3af;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</div>`:''}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderCalPanel(events) {
-  const el  = document.getElementById('panel-cal');
-  const cnt = document.getElementById('cal-count');
-  if(!events.length) { el.innerHTML = '<div class="empty">Sin eventos en los próximos 14 días</div>'; if(cnt) cnt.textContent=''; return; }
-  if(cnt) cnt.textContent = `${events.length} evento${events.length!==1?'s':''}`;
-  el.innerHTML = events.map(ev => {
-    const { label, hhmm, isToday } = fmtEventDate(ev.start);
-    const attendeeCount = ev.attendees ? ev.attendees.length : 0;
-    const organizer = senderName(ev.organizer);
-    return `<div class="live-item">
-      <div style="flex-shrink:0;text-align:center;min-width:52px">
-        <span class="live-cal-badge ${isToday?'live-today':''}">${label}</span>
-        <div style="font-size:12px;font-weight:700;color:#374151;margin-top:3px">${hhmm}</div>
-      </div>
-      <div style="flex:1;min-width:0">
-        <a class="live-subject" href="${ev.webLink}" target="_blank">${ev.subject?.slice(0,55)||'(sin título)'}</a>
-        <div class="live-meta">
-          ${ev.location?`<span>📍 ${ev.location.slice(0,30)}</span>`:''}
-          ${attendeeCount>1?`<span>👥 ${attendeeCount} asistentes</span>`:`<span>${organizer}</span>`}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function loadSuggestions(emails) {
-  try {
-    const data = emails.map(e => ({ asunto: e.subject, de: e.sender, resumen: (e.summary||'').slice(0,120) }));
-    const resp = await window.cowork.askClaude(
-      'Eres asistente de Gaby, Asistente de Dirección Comercial en POP Investments (desarrolladora inmobiliaria Monterrey). Analiza estos correos y sugiere hasta 3 tareas concretas y accionables que Gaby debería agregar a su tablero. Ignora correos automáticos, de sistemas o de marketing. Responde SOLO un JSON array con objetos: [{titulo, responsable, prioridad}] donde prioridad es Alta/Media/Baja y responsable es quien debe actuar. Si no hay tareas claras, devuelve [].',
-      data
-    );
-    let suggestions = [];
-    try {
-      const txt = typeof resp === 'string' ? resp : JSON.stringify(resp);
-      const match = txt.match(/\[[\s\S]*\]/);
-      if(match) suggestions = JSON.parse(match[0]);
-    } catch(e) {}
-
-    if(!suggestions.length) return;
-    const card = document.getElementById('suggest-card');
-    const panel = document.getElementById('panel-suggest');
-    card.style.display = '';
-    panel.innerHTML = suggestions.map(s => `
-      <div class="suggest-item">
-        <div style="flex:1">
-          <div style="font-weight:600;color:#111827">${s.titulo||'—'}</div>
-          <div style="font-size:11px;color:#9ca3af;margin-top:2px">${s.responsable||''}</div>
-        </div>
-        ${prioBadge(s.prioridad)}
-        <button class="btn btn-primary btn-sm" onclick="addSuggestedTask(${JSON.stringify(s).replace(/"/g,'&quot;')})">+ Add</button>
-      </div>`).join('');
-  } catch(e) { /* silently fail */ }
-}
-
-function addSuggestedTask(s) {
-  const t = { id:nextId++, titulo:s.titulo||'Tarea sugerida por IA', area:'Chief of Staff',
-    responsable:s.responsable||'Gaby', prioridad:s.prioridad||'Media',
-    estado:'Pendiente', fecha:'', tipo:'Tarea general', notas:'Sugerida por IA desde correos', top:false, flag:false };
-  TASKS.push(t); sessionTasks.push(t);
-  updateBadge();
-  // Remove from suggestions
-  const panel = document.getElementById('panel-suggest');
-  if(panel) { const btns = panel.querySelectorAll('button'); btns.forEach(b => { if(b.textContent.includes('Add') && b.onclick.toString().includes(s.titulo?.slice(0,10))) b.textContent = '✓'; }); }
-}
-
-// ══ AJUSTES ══
-function renderAjustes() {
-  renderCfgList('areas');
-  renderCfgList('resp');
-  renderCfgList('tipos');
-}
-function renderCfgList(type) {
-  const map = { areas:['cfg-areas-list',CONFIG_AREAS, AREA_C], resp:['cfg-resp-list',CONFIG_RESP, null], tipos:['cfg-tipos-list',CONFIG_TIPOS, null] };
-  const [elId, arr, colorMap] = map[type];
-  const el = document.getElementById(elId); if(!el) return;
-  el.innerHTML = arr.map(v => {
-    const col = colorMap ? (colorMap[v]||'#94a3b8') : (RESP[v]?.color||'#94a3b8');
-    return `<div class="cfg-item">
-      <span class="cfg-dot" style="background:${col}"></span>
-      <span style="flex:1">${v}</span>
-      <button class="btn-icon btn-sm" onclick="removeCfgItem('${type}','${v.replace(/'/g,"\\'")}')" title="Eliminar" style="color:#f43f5e;font-size:14px">×</button>
-    </div>`;
-  }).join('') || '<div style="padding:10px;font-size:12px;color:#9ca3af;text-align:center">Lista vacía</div>';
-}
-function addCfgItem(type) {
-  const inputs = { areas:'cfg-area-new', resp:'cfg-resp-new', tipos:'cfg-tipo-new' };
-  const arrs   = { areas:CONFIG_AREAS, resp:CONFIG_RESP, tipos:CONFIG_TIPOS };
-  const el = document.getElementById(inputs[type]);
-  const val = el?.value.trim(); if(!val) return;
-  const arr = arrs[type];
-  if(arr.includes(val)) { el.style.borderColor='#f43f5e'; setTimeout(()=>el.style.borderColor='',1500); return; }
-  arr.push(val);
-  if(type==='areas') AREA_C[val] = '#64748b';
-  if(type==='resp')  RESP[val]   = { color:'#94a3b8', bg:'#f1f5f9', text:'#6b7280', init:val[0]||'?' };
-  el.value = '';
-  renderCfgList(type);
-  refreshDropdowns();
-}
-function removeCfgItem(type, val) {
-  const arrs = { areas:CONFIG_AREAS, resp:CONFIG_RESP, tipos:CONFIG_TIPOS };
-  const arr  = arrs[type];
-  const idx  = arr.indexOf(val);
-  if(idx === -1) return;
-  const used = type==='areas' ? TASKS.some(t=>t.area===val) : type==='resp' ? TASKS.some(t=>t.responsable===val) : false;
-  if(used && !confirm(`"${val}" tiene tareas asignadas. ¿Eliminar de todas formas?`)) return;
-  arr.splice(idx,1);
-  if(type==='areas') delete AREA_C[val];
-  if(type==='resp')  delete RESP[val];
-  renderCfgList(type);
-  refreshDropdowns();
-}
-
-// ══ MODAL ══
-function openModal(id) {
-  refreshDropdowns();
-  const o = document.getElementById('modal-bg');
-  if(id) {
-    const t=TASKS.find(t=>t.id===id); if(!t) return;
-    document.getElementById('modal-title').textContent='Editar Tarea';
-    document.getElementById('m-id').value=id;
-    document.getElementById('m-titulo').value=t.titulo||'';
-    document.getElementById('m-area').value=t.area||'';
-    document.getElementById('m-resp').value=t.responsable||'';
-    document.getElementById('m-prio').value=t.prioridad||'';
-    document.getElementById('m-estado').value=t.estado||'Pendiente';
-    document.getElementById('m-fecha').value=t.fecha||'';
-    document.getElementById('m-tipo').value=t.tipo||'';
-    document.getElementById('m-notas').value=t.notas||'';
-    document.getElementById('m-top').checked=!!t.top;
-    document.getElementById('m-flag').checked=!!t.flag;
-  } else {
-    document.getElementById('modal-title').textContent='Nueva Tarea';
-    document.getElementById('m-id').value='';
-    document.getElementById('m-titulo').value='';
-    document.getElementById('m-area').value='';
-    document.getElementById('m-resp').value='';
-    document.getElementById('m-fecha').value='';
-    document.getElementById('m-notas').value='';
-    document.getElementById('m-prio').value='Media';
-    document.getElementById('m-estado').value='Pendiente';
-    document.getElementById('m-tipo').value='Tarea general';
-    document.getElementById('m-top').checked=false;
-    document.getElementById('m-flag').checked=false;
-  }
-  o.classList.add('open');
-}
-function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
-function saveTask() {
-  const titulo=document.getElementById('m-titulo').value.trim();
-  if(!titulo){alert('La tarea necesita un nombre');return;}
-  const id=document.getElementById('m-id').value;
-  const data={
-    titulo, area:document.getElementById('m-area').value||'Chief of Staff',
-    responsable:document.getElementById('m-resp').value||'Gaby',
-    prioridad:document.getElementById('m-prio').value||'Media',
-    estado:document.getElementById('m-estado').value||'Pendiente',
-    fecha:document.getElementById('m-fecha').value||'',
-    tipo:document.getElementById('m-tipo').value||'Tarea general',
-    notas:document.getElementById('m-notas').value||'',
-    top:document.getElementById('m-top').checked,
-    flag:document.getElementById('m-flag').checked,
-  };
-  if(id){const i=TASKS.findIndex(t=>t.id===parseInt(id));if(i>-1)TASKS[i]={...TASKS[i],...data};}
-  else TASKS.push({id:nextId++,...data});
-  closeModal(); updateBadge();
-  const renders={dashboard:renderDashboard,kanban:renderKanban,lista:renderLista,minuta:renderMinuta,calendario:renderCalendario};
-  if(renders[currentSection]) renders[currentSection]();
-}
-
-// ══ DETAIL ══
-function openDetail(id) {
-  const t=TASKS.find(t=>t.id===id); if(!t) return;
-  document.getElementById('d-title').textContent=t.titulo;
-  document.getElementById('d-edit-btn').onclick=()=>{closeDetail();openModal(id);};
-  const od=isOverdue(t.fecha);
-  document.getElementById('d-body').innerHTML=`
-    <div style="display:flex;gap:10px;margin-bottom:14px">
-      <button class="toggle-btn" onclick="toggleTop(${id})" style="font-size:18px;color:${t.top?'#f59e0b':'#d1d5db'}" title="${t.top?'Quitar de TOP':'Marcar como TOP'}">⭐ ${t.top?'TOP Semana':'Sin TOP'}</button>
-      <button class="toggle-btn" onclick="toggleFlag(${id})" style="font-size:18px;color:${t.flag?'#ef4444':'#d1d5db'}" title="${t.flag?'Quitar parada':'Marcar como parada'}">🚩 ${t.flag?'Parada Enrique':'Sin parada'}</button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-      <div class="detail-field"><div class="detail-key">Área</div><div class="detail-val" style="color:${AREA_C[t.area]||'#374151'};font-weight:700">${t.area||'—'}</div></div>
-      <div class="detail-field"><div class="detail-key">Responsable</div><div class="detail-val">${respChip(t.responsable)}</div></div>
-      <div class="detail-field"><div class="detail-key">Prioridad</div><div class="detail-val">${prioBadge(t.prioridad)}</div></div>
-      <div class="detail-field"><div class="detail-key">Estado</div><div class="detail-val"><span class="badge ${estadoCls(t.estado)}">${t.estado}</span></div></div>
-      <div class="detail-field"><div class="detail-key">Fecha límite</div><div class="detail-val" style="font-weight:700;color:${od?'#dc2626':'#374151'}">${t.fecha?fmtDate(t.fecha)+(od?' ⚠️':''):'—'}</div></div>
-      <div class="detail-field"><div class="detail-key">Tipo</div><div class="detail-val">${t.tipo||'—'}</div></div>
-    </div>
-    ${t.notas?`<div style="background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12.5px;line-height:1.6;color:#374151"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin-bottom:6px">Notas</div>${t.notas}</div>`:''}
-    <div style="border-top:1px solid #f3f4f6;padding-top:14px">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin-bottom:8px">Cambiar estado</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${['Pendiente','En proceso','Pdte. aprobación Enrique','Completado','Cancelado'].map(s=>`<button class="btn ${t.estado===s?'btn-primary':'btn-ghost'} btn-sm" onclick="quickStatus(${id},'${s}')">${s}</button>`).join('')}
-      </div>
-    </div>`;
-  document.getElementById('detail-bg').classList.add('open');
-}
-function closeDetail() { document.getElementById('detail-bg').classList.remove('open'); }
-function quickStatus(id, status) {
-  const t=TASKS.find(t=>t.id===id); if(!t) return;
-  t.estado=status; closeDetail(); updateBadge();
-  const renders={dashboard:renderDashboard,kanban:renderKanban,lista:renderLista};
-  if(renders[currentSection]) renders[currentSection]();
-}
-function markDone(id) {
-  const t=TASKS.find(t=>t.id===id); if(t){t.estado='Completado';renderLista();updateBadge();}
-}
-
-// ══ UTILS ══
-function updateBadge() {
-  const n = TASKS.filter(t=>t.flag && t.estado!=='Completado' && t.estado!=='Cancelado').length
-          || TASKS.filter(t=>t.estado==='Pdte. aprobación Enrique').length;
-  document.getElementById('badge-blocked').textContent = n;
-}
-function exportTxt() {
-  const fl=TASKS.filter(t=>t.flag&&t.estado!=='Completado');
-  const tp=TASKS.filter(t=>t.top&&t.estado!=='Completado');
-  const up=active().filter(t=>t.fecha&&!isOverdue(t.fecha)).sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(0,10);
-  let txt=`RESUMEN ÁREA COMERCIAL · ${TODAY}\n${'─'.repeat(50)}\n`;
-  txt+=`TOP SEMANA (${tp.length}):\n`; tp.forEach(t=>txt+=`  ⭐ ${t.titulo} [${t.responsable}]\n`);
-  txt+=`\nPARADAS POR ENRIQUE (${fl.length}):\n`; fl.forEach(t=>txt+=`  🚩 ${t.titulo} [${t.responsable}] – ${t.area}\n`);
-  txt+=`\nPRÓXIMOS A VENCER:\n`; up.forEach(t=>txt+=`  • ${t.titulo} – ${fmtDate(t.fecha)} [${t.responsable}]\n`);
-  const blob=new Blob([txt],{type:'text/plain'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='resumen-comercial.txt'; a.click();
-}
-
-// ══ CLOSE ON BG ══
-document.getElementById('modal-bg').onclick=e=>{if(e.target===e.currentTarget)closeModal();};
-document.getElementById('detail-bg').onclick=e=>{if(e.target===e.currentTarget)closeDetail();};
-
-// ══ INIT ══
-refreshDropdowns();
-renderDashboard();
-updateBadge();
-</script>
-</body>
-</html>
+    <!--
