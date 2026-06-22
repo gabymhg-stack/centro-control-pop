@@ -112,6 +112,9 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
 .qa-input { padding: 4px 7px; border: 1px dashed #86efac; border-radius: 5px; font-size: 12px; font-family: inherit; outline: none; background: #fff; width: 100%; }
 .qa-input:focus { border-color: #22c55e; border-style: solid; }
 .qa-sel { padding: 4px 6px; border: 1px solid #bbf7d0; border-radius: 5px; font-size: 11px; font-family: inherit; background: #fff; outline: none; width: 100%; }
+.inline-editable { cursor: pointer; border-radius: 4px; transition: background 0.15s; }
+.inline-editable:hover { background: rgba(99,102,241,0.07); }
+.inline-editing { background: rgba(99,102,241,0.1) !important; border-radius: 4px; }
 
 /* BADGES */
 .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
@@ -283,6 +286,10 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
     </div>
     <div class="sb-item" id="nav-ajustes" onclick="goto('ajustes')">
       <span class="sb-icon">⚙</span> Ajustes
+    </div>
+    <div class="sb-item" id="nav-archivo" onclick="goto('archivo')">
+      <span class="sb-icon">🗄</span> Archivo
+      <span class="sb-badge" id="badge-archivo" style="background:#6b7280">0</span>
     </div>
     <div class="sb-sec-label" style="margin-top:8px">Acciones</div>
     <div class="sb-item add-btn" onclick="openModal()">
@@ -497,6 +504,28 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
       </div>
     </section>
 
+    <!-- ARCHIVO -->
+    <section id="s-archivo" class="section">
+      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center">
+        <div style="flex:1">
+          <div style="font-size:13px;color:#6b7280">Tareas completadas y canceladas. No aparecen en Lista ni Kanban.</div>
+        </div>
+        <select id="arc-filter" class="qa-sel" onchange="renderArchivo()" style="width:160px">
+          <option value="">Completadas y Canceladas</option>
+          <option value="Completado">Solo Completadas</option>
+          <option value="Cancelado">Solo Canceladas</option>
+        </select>
+      </div>
+      <div class="card">
+        <table class="task-table" style="width:100%">
+          <thead><tr>
+            <th>Tarea</th><th>Responsable</th><th>Área</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th>Acc.</th>
+          </tr></thead>
+          <tbody id="archivo-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- AJUSTES -->
     <section id="s-ajustes" class="section">
       <div class="grid-3">
@@ -691,6 +720,16 @@ async function loadTasks() {
   refreshDropdowns();
   renderDashboard();
   updateBadge();
+
+  // Auto-refresh cada 30 segundos
+  setInterval(async () => {
+    const modal = document.getElementById('modal-bg');
+    const detail = document.getElementById('detail-bg');
+    if(modal?.classList.contains('open') || detail?.classList.contains('open')) return;
+    await loadTasks();
+    rerenderCurrent();
+    updateBadge();
+  }, 30000);
 })();
 
 function getWeekNum(d) {
@@ -799,12 +838,13 @@ function goto(sec) {
     minuta:['Minuta','Notas de reuniones y tareas rápidas'],
     calendario:['Calendario','Vista mensual de pendientes'],
     ajustes:['Ajustes','Configuración del sistema'],
+    archivo:['Archivo','Tareas completadas y canceladas'],
   };
   const t = titles[sec]||[sec,''];
   document.getElementById('tb-title').textContent = t[0];
   const weekNum = getWeekNum(_now);
   document.getElementById('tb-sub').textContent = t[1] || `Semana W${weekNum}`;
-  const renders = {dashboard:renderDashboard,kanban:renderKanban,lista:renderLista,minuta:renderMinuta,calendario:renderCalendario,ajustes:renderAjustes};
+  const renders = {dashboard:renderDashboard,kanban:renderKanban,lista:renderLista,minuta:renderMinuta,calendario:renderCalendario,ajustes:renderAjustes,archivo:renderArchivo};
   if(renders[sec]) renders[sec]();
 }
 
@@ -935,7 +975,7 @@ async function toggleFlag(id) {
   }
 }
 function rerenderCurrent() {
-  const map = {dashboard:renderDashboard,kanban:renderKanban,lista:renderLista,minuta:renderMinuta};
+  const map = {dashboard:renderDashboard,kanban:renderKanban,lista:renderLista,minuta:renderMinuta,archivo:renderArchivo};
   if(map[currentSection]) map[currentSection]();
 }
 
@@ -1028,7 +1068,8 @@ function renderLista() {
   const tasks = TASKS.filter(t =>
     (!search || t.titulo.toLowerCase().includes(search) || (t.notas||'').toLowerCase().includes(search)) &&
     (!fR || getResponsables(t).includes(fR)) && (!fA || t.area===fA) &&
-    (!fE || t.estado===fE) && (!fP || t.prioridad===fP) &&
+    (fE ? t.estado===fE : (t.estado!=='Completado' && t.estado!=='Cancelado')) &&
+    (!fP || t.prioridad===fP) &&
     (!fTop || t.top) && (!fFlag || t.flag)
   );
 
@@ -1052,22 +1093,25 @@ function renderLista() {
     ? '<tr><td colspan="10" style="text-align:center;padding:24px;color:#9ca3af">Sin resultados</td></tr>'
     : tasks.map(t => {
         const od = isOverdue(t.fecha);
+        const titEsc = (t.titulo||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const areEsc = (t.area||'').replace(/'/g,"\\'");
+        const notEsc = (t.notas||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         return `<tr>
           <td>
-            <div class="cell-title">${t.titulo}</div>
-            <div class="cell-area" style="color:${AREA_C[t.area]||'#94a3b8'}">${t.area||''}</div>
+            <div class="cell-title inline-editable" onclick="startInlineEdit(this,${t.id},'titulo','${titEsc}')" title="Click para editar">${t.titulo}</div>
+            <div class="cell-area inline-editable" onclick="event.stopPropagation();startInlineEdit(this,${t.id},'area','${areEsc}')" style="color:${AREA_C[t.area]||'#94a3b8'}" title="Click para editar área">${t.area||'—'}</div>
           </td>
           <td>${respChips(t)}</td>
           <td><span style="font-size:11px;color:#6b7280">${t.tipo||'—'}</span></td>
-          <td>${prioBadge(t.prioridad)}</td>
-          <td><span style="font-size:12px;font-weight:700;color:${od?'#dc2626':'#6b7280'}">${t.fecha?fmtDate(t.fecha):'—'}</span></td>
-          <td><span class="badge ${estadoCls(t.estado)}">${t.estado}</span></td>
+          <td class="inline-editable" onclick="startInlineEdit(this,${t.id},'prioridad','${t.prioridad||'Media'}')" title="Click para editar">${prioBadge(t.prioridad)}</td>
+          <td class="inline-editable" onclick="startInlineEdit(this,${t.id},'fecha','${t.fecha||''}')" title="Click para editar"><span style="font-size:12px;font-weight:700;color:${od?'#dc2626':'#6b7280'}">${t.fecha?fmtDate(t.fecha):'—'}</span></td>
+          <td class="inline-editable" onclick="startInlineEdit(this,${t.id},'estado','${t.estado||'Pendiente'}')" title="Click para editar"><span class="badge ${estadoCls(t.estado)}">${t.estado}</span></td>
           <td style="text-align:center"><button class="toggle-btn${t.flag?' active-flag':''}" onclick="toggleFlag(${t.id})" style="color:${t.flag?'#ef4444':'#d1d5db'}">🚩</button></td>
           <td style="text-align:center"><button class="toggle-btn${t.top?' active-star':''}" onclick="toggleTop(${t.id})" style="color:${t.top?'#f59e0b':'#d1d5db'}">⭐</button></td>
-          <td><span class="cell-notes">${t.notas||'—'}</span></td>
+          <td class="inline-editable" onclick="startInlineEdit(this,${t.id},'notas','${notEsc}')" title="Click para editar notas"><span class="cell-notes">${t.notas||'—'}</span></td>
           <td><div style="display:flex;gap:2px">
             <button class="btn-icon" onclick="openDetail(${t.id})" title="Ver">👁</button>
-            <button class="btn-icon" onclick="openModal(${t.id})" title="Editar">✎</button>
+            <button class="btn-icon" onclick="openModal(${t.id})" title="Editar completo">✎</button>
             ${t.estado!=='Completado'?`<button class="btn-icon" onclick="markDone(${t.id})" title="Completar" style="color:#10b981">✓</button>`:''}
           </div></td>
         </tr>`;
@@ -1086,6 +1130,98 @@ function qaToggleStar() {
   qaTopOn = !qaTopOn;
   const btn = document.getElementById('qa-star-btn');
   if(btn) btn.style.color = qaTopOn ? '#f59e0b' : '#d1d5db';
+}
+
+// ══ INLINE EDITING ══
+function startInlineEdit(el, id, field, value) {
+  if(el.classList.contains('inline-editing')) return;
+  el.classList.add('inline-editing');
+  el._prevHTML = el.innerHTML;
+
+  let inp;
+  if(field === 'titulo' || field === 'notas') {
+    inp = document.createElement(field === 'notas' ? 'input' : 'input');
+    inp.className = 'qa-input';
+    inp.value = value;
+    inp.style.cssText = field === 'titulo'
+      ? 'width:100%;font-weight:600;font-size:13px'
+      : 'width:100%;font-size:12px';
+    inp.placeholder = field === 'titulo' ? 'Descripción...' : 'Notas...';
+  } else if(field === 'area') {
+    inp = document.createElement('select');
+    inp.className = 'qa-sel';
+    CONFIG_AREAS.forEach(a => {
+      const o = document.createElement('option');
+      o.value = a; o.textContent = a;
+      if(a === value) o.selected = true;
+      inp.appendChild(o);
+    });
+  } else if(field === 'prioridad') {
+    inp = document.createElement('select');
+    inp.className = 'qa-sel';
+    ['Alta','Media','Baja'].forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      if(v === value) o.selected = true;
+      inp.appendChild(o);
+    });
+  } else if(field === 'estado') {
+    inp = document.createElement('select');
+    inp.className = 'qa-sel';
+    ['Pendiente','En proceso','Pdte. aprobación Enrique','Rutinario','Completado','Cancelado'].forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      if(v === value) o.selected = true;
+      inp.appendChild(o);
+    });
+  } else if(field === 'fecha') {
+    inp = document.createElement('input');
+    inp.type = 'date';
+    inp.className = 'qa-input';
+    inp.value = value;
+    inp.style.width = '120px';
+  }
+
+  if(!inp) { el.classList.remove('inline-editing'); return; }
+  const isSelect = inp.tagName === 'SELECT';
+
+  inp.addEventListener('blur', () => saveInlineEdit(el, id, field, inp.value));
+  inp.addEventListener('keydown', e => {
+    if(e.key === 'Enter') inp.blur();
+    if(e.key === 'Escape') { e.preventDefault(); cancelInlineEdit(el); }
+  });
+  if(isSelect) inp.addEventListener('change', () => inp.blur());
+
+  el.innerHTML = '';
+  el.appendChild(inp);
+  inp.focus();
+  if(!isSelect && inp.select) inp.select();
+}
+
+async function saveInlineEdit(el, id, field, newVal) {
+  const t = TASKS.find(x => x.id === id);
+  if(!t) { cancelInlineEdit(el); return; }
+  const oldVal = t[field];
+  if(newVal === (oldVal||'')) { cancelInlineEdit(el); return; }
+  t[field] = newVal;
+  try {
+    await api('PUT', {...t}, id);
+    updateBadge();
+    showToast('✓ Guardado');
+    rerenderCurrent();
+  } catch(e) {
+    t[field] = oldVal;
+    showToast('❌ Error al guardar');
+    rerenderCurrent();
+  }
+}
+
+function cancelInlineEdit(el) {
+  if(el && el._prevHTML !== undefined) {
+    el.innerHTML = el._prevHTML;
+    el.classList.remove('inline-editing');
+    delete el._prevHTML;
+  }
 }
 
 async function qaAdd() {
@@ -1251,6 +1387,50 @@ function renderCalendario() {
   const trailing=(7-(firstDay+daysInMonth)%7)%7;
   for(let d=1;d<=trailing;d++) html+=`<div class="cal-cell other-month"><div class="cal-daynum">${d}</div></div>`;
   document.getElementById('cal-grid').innerHTML=html;
+}
+
+// ══ ARCHIVO ══
+function renderArchivo() {
+  const fE = document.getElementById('arc-filter')?.value || '';
+  const archived = TASKS.filter(t =>
+    fE ? t.estado===fE : (t.estado==='Completado' || t.estado==='Cancelado')
+  ).sort((a,b) => b.id - a.id);
+  const tbody = document.getElementById('archivo-tbody'); if(!tbody) return;
+  if(!archived.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af">No hay tareas archivadas</td></tr>';
+    return;
+  }
+  tbody.innerHTML = archived.map(t => {
+    const od = isOverdue(t.fecha);
+    return `<tr>
+      <td><div class="cell-title">${t.titulo}</div><div class="cell-area" style="color:${AREA_C[t.area]||'#94a3b8'}">${t.area||''}</div></td>
+      <td>${respChips(t)}</td>
+      <td><span style="font-size:11px;color:#6b7280">${t.area||'—'}</span></td>
+      <td>${prioBadge(t.prioridad)}</td>
+      <td><span class="badge ${estadoCls(t.estado)}">${t.estado}</span></td>
+      <td><span style="font-size:12px;color:${od?'#dc2626':'#6b7280'}">${t.fecha?fmtDate(t.fecha):'—'}</span></td>
+      <td><div style="display:flex;gap:2px">
+        <button class="btn-icon" onclick="openDetail(${t.id})" title="Ver">👁</button>
+        <button class="btn-icon" onclick="restoreTask(${t.id})" title="Restaurar" style="color:#10b981">↩</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+async function restoreTask(id) {
+  const t = TASKS.find(t=>t.id===id); if(!t) return;
+  const prev = t.estado;
+  t.estado = 'Pendiente';
+  updateBadge();
+  renderArchivo();
+  try {
+    await api('PUT', {...t}, id);
+    showToast('↩ Tarea restaurada a Pendiente');
+  } catch(e) {
+    t.estado = prev;
+    updateBadge();
+    renderArchivo();
+    showToast('❌ Error: ' + e.message);
+  }
 }
 
 // ══ AJUSTES ══
@@ -1445,6 +1625,9 @@ function updateBadge() {
   const n = TASKS.filter(t=>t.flag && t.estado!=='Completado' && t.estado!=='Cancelado').length
           || TASKS.filter(t=>t.estado==='Pdte. aprobación Enrique').length;
   document.getElementById('badge-blocked').textContent = n;
+  const arc = TASKS.filter(t=>t.estado==='Completado'||t.estado==='Cancelado').length;
+  const arcBadge = document.getElementById('badge-archivo');
+  if(arcBadge) arcBadge.textContent = arc;
 }
 function exportTxt() {
   const fl=TASKS.filter(t=>t.flag&&t.estado!=='Completado');
