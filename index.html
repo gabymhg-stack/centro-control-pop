@@ -406,6 +406,7 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
         <label style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
           <input type="checkbox" id="f-flag" onchange="renderLista()"> 🚩 Solo paradas
         </label>
+        <button class="btn btn-primary btn-sm" onclick="generarPDFEnrique()" title="Descargar reporte PDF para Enrique" style="white-space:nowrap;background:#6366f1;margin-left:8px">📄 PDF Enrique</button>
       </div>
       <div class="card" style="overflow-x:auto">
         <table>
@@ -1222,6 +1223,172 @@ function cancelInlineEdit(el) {
     el.classList.remove('inline-editing');
     delete el._prevHTML;
   }
+}
+
+// ══ PDF ENRIQUE ══
+function generarPDFEnrique() {
+  const active = t => t.estado !== 'Completado' && t.estado !== 'Cancelado';
+  const esEnrique = t => (t.responsables||[]).some(r => r.toLowerCase().includes('enrique')) || (t.responsable||'').toLowerCase().includes('enrique');
+
+  const paradas    = TASKS.filter(t => active(t) && t.flag);
+  const pendEnrique = TASKS.filter(t => active(t) && esEnrique(t));
+  const topTasks   = TASKS.filter(t => active(t) && (t.top || t.prioridad === 'Alta'));
+
+  // Agrupar top por responsable principal
+  const teamOrder = ['Enrique','Gaby','Osvaldo','Erick','Andrea','Luis'];
+  const topPorPersona = {};
+  teamOrder.forEach(p => {
+    topPorPersona[p] = topTasks.filter(t =>
+      (t.responsables||[]).some(r=>r.toLowerCase().includes(p.toLowerCase())) ||
+      (t.responsable||'').toLowerCase().includes(p.toLowerCase())
+    );
+  });
+
+  const now   = new Date();
+  const dateStr = now.toLocaleDateString('es-MX', {day:'numeric',month:'long',year:'numeric'});
+  const timeStr = now.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
+  const semana  = getISOWeek(now);
+
+  function getISOWeek(d) {
+    const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - (tmp.getUTCDay()||7));
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+    return Math.ceil((((tmp - yearStart) / 86400000) + 1)/7);
+  }
+
+  function prioIcon(p) {
+    return p==='Alta' ? '🔴' : p==='Media' ? '🟡' : '🟢';
+  }
+
+  function tdRow(t) {
+    const resps = (t.responsables||[t.responsable||'']).join(', ');
+    const fecha = t.fecha ? new Date(t.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}) : '—';
+    return `<tr>
+      <td>${t.titulo}</td>
+      <td>${t.area||'—'}</td>
+      <td>${resps}</td>
+      <td>${fecha}</td>
+    </tr>`;
+  }
+
+  function personaBlock(nombre) {
+    const tasks = topPorPersona[nombre];
+    if(!tasks || tasks.length === 0) return '';
+    const rows = tasks.map((t,i) => {
+      const fecha = t.fecha ? new Date(t.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}) : '';
+      return `<div class="prio-row">${i===0?'<span class="num">1.</span>':''}<span class="prio-icon">${prioIcon(t.prioridad)}</span> ${t.titulo}${fecha?` <span class="fecha-tag">${fecha}</span>`:''}${t.flag?' 🚩':''}</div>`;
+    }).join('');
+    return `<div class="persona-block">
+      <div class="persona-name">${nombre.toUpperCase()}</div>
+      <div class="persona-count">${tasks.length} tarea${tasks.length!==1?'s':''} prioritaria${tasks.length!==1?'s':''}</div>
+      ${rows}
+    </div>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte Comercial · POP Investments · W${semana}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color:#111; background:#fff; font-size:11px; padding:28px 32px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; padding-bottom:14px; border-bottom:2px solid #111; }
+  .header-left h1 { font-size:20px; font-weight:800; letter-spacing:-0.5px; }
+  .header-left h2 { font-size:13px; color:#555; font-weight:400; margin-top:3px; }
+  .header-right { text-align:right; font-size:10px; color:#777; line-height:1.6; }
+  .confidencial { font-size:9px; font-weight:700; letter-spacing:2px; color:#dc2626; margin-top:4px; }
+
+  .section { margin-bottom:22px; }
+  .section-title {
+    font-size:9px; font-weight:700; letter-spacing:3px; color:#fff;
+    background:#111; padding:5px 10px; margin-bottom:10px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .section-title.red { background:#dc2626; }
+  .section-title.indigo { background:#4f46e5; }
+
+  table { width:100%; border-collapse:collapse; font-size:10.5px; }
+  thead tr { background:#f4f4f4; }
+  th { text-align:left; padding:5px 8px; font-size:9px; font-weight:700; letter-spacing:0.5px; color:#555; border-bottom:1px solid #e5e7eb; }
+  td { padding:5px 8px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  .empty-note { color:#aaa; font-style:italic; padding:6px 8px; font-size:10px; }
+
+  .prio-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .persona-block { break-inside:avoid; }
+  .persona-name { font-size:11px; font-weight:800; letter-spacing:1px; margin-bottom:2px; }
+  .persona-count { font-size:9px; color:#888; margin-bottom:6px; }
+  .prio-row { display:flex; align-items:baseline; gap:4px; margin-bottom:4px; line-height:1.4; font-size:10.5px; }
+  .num { font-weight:700; min-width:14px; }
+  .prio-icon { font-size:9px; }
+  .fecha-tag { color:#dc2626; font-size:9px; font-weight:700; }
+
+  .footer { margin-top:28px; padding-top:10px; border-top:1px solid #e5e7eb; display:flex; justify-content:space-between; font-size:9px; color:#aaa; }
+
+  @media print {
+    body { padding:16px 20px; }
+    @page { margin:10mm 12mm; size:letter portrait; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Reporte Comercial · POP Investments</h1>
+    <h2>Semana W${semana} · ${dateStr}</h2>
+  </div>
+  <div class="header-right">
+    Generado el ${dateStr} · ${timeStr}<br>
+    Preparado por: Gabriela
+    <div class="confidencial">CONFIDENCIAL</div>
+  </div>
+</div>
+
+<!-- PENDIENTES PARADOS POR ENRIQUE -->
+<div class="section">
+  <div class="section-title red">🚩 &nbsp; PENDIENTES PARADOS POR ENRIQUE</div>
+  ${paradas.length === 0
+    ? '<div class="empty-note">Sin pendientes parados actualmente.</div>'
+    : `<table>
+        <thead><tr><th>Pendiente</th><th>Área</th><th>Responsable</th><th>Fecha</th></tr></thead>
+        <tbody>${paradas.map(tdRow).join('')}</tbody>
+      </table>`}
+</div>
+
+<!-- PENDIENTES DE ENRIQUE -->
+<div class="section">
+  <div class="section-title">📋 &nbsp; PENDIENTES DE ENRIQUE</div>
+  ${pendEnrique.length === 0
+    ? '<div class="empty-note">Sin pendientes asignados a Enrique.</div>'
+    : `<table>
+        <thead><tr><th>Pendiente</th><th>Área</th><th>Responsable</th><th>Fecha</th></tr></thead>
+        <tbody>${pendEnrique.map(tdRow).join('')}</tbody>
+      </table>`}
+</div>
+
+<!-- PRIORIDADES POR ÁREA -->
+<div class="section">
+  <div class="section-title indigo">⭐ &nbsp; PRIORIDADES POR ÁREA</div>
+  <div class="prio-grid">
+    ${teamOrder.map(personaBlock).join('')}
+  </div>
+</div>
+
+<div class="footer">
+  <span>Generado el ${dateStr} · Área Comercial POP Investments</span>
+  <span>CONFIDENCIAL</span>
+</div>
+
+<script>window.onload = () => window.print();</script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if(!w) { showToast('⚠️ Permite ventanas emergentes para generar el PDF'); return; }
+  w.document.write(html);
+  w.document.close();
 }
 
 async function qaAdd() {
