@@ -1381,7 +1381,6 @@ function generarPDFEnrique() {
   <span>CONFIDENCIAL</span>
 </div>
 
-<script>window.onload = () => window.print();</script>
 </body>
 </html>`;
 
@@ -1389,6 +1388,7 @@ function generarPDFEnrique() {
   if(!w) { showToast('⚠️ Permite ventanas emergentes para generar el PDF'); return; }
   w.document.write(html);
   w.document.close();
+  setTimeout(() => w.print(), 600);
 }
 
 async function qaAdd() {
