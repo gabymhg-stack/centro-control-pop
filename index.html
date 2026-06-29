@@ -406,7 +406,7 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
         <label style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
           <input type="checkbox" id="f-flag" onchange="renderLista()"> 🚩 Solo paradas
         </label>
-        <button class="btn btn-primary btn-sm" onclick="generarPDFEnrique()" title="Descargar reporte PDF para Enrique" style="white-space:nowrap;background:#6366f1;margin-left:8px">📄 PDF Enrique</button>
+        <button id="btn-tablero-pdf" class="btn btn-primary btn-sm" onclick="generarTablero(this)" title="Descargar Tablero de Pendientes como PDF" style="white-space:nowrap;background:#6366f1;margin-left:8px">📥 Tablero PDF</button>
       </div>
       <div class="card" style="overflow-x:auto">
         <table>
@@ -498,7 +498,7 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
       <div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap">
         <div style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#f43f5e;display:inline-block"></span>Gaby</div>
         <div style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span>Enrique</div>
-        <div style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block"></span>Kiara</div>
+        <div style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block"></span>Practicante</div>
         <div style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#f97316;display:inline-block"></span>Luis</div>
         <div style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#6366f1;display:inline-block"></span>Osvaldo</div>
         <div style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#14b8a6;display:inline-block"></span>Erick</div>
@@ -642,7 +642,7 @@ tbody tr.qa-row:hover td { background: #dcfce7; }
 const RESP_BASE = {
   'Enrique':     { color:'#10b981', bg:'#d1fae5', text:'#065f46', init:'E'  },
   'Gaby':        { color:'#f43f5e', bg:'#ffe4e6', text:'#9f1239', init:'G'  },
-  'Kiara': { color:'#f59e0b', bg:'#fef3c7', text:'#78350f', init:'K'  },
+  'Practicante': { color:'#f59e0b', bg:'#fef3c7', text:'#78350f', init:'P'  },
   'Luis':        { color:'#f97316', bg:'#ffedd5', text:'#9a3412', init:'L'  },
   'Osvaldo':     { color:'#6366f1', bg:'#e0e7ff', text:'#3730a3', init:'O'  },
   'Erick':       { color:'#14b8a6', bg:'#ccfbf1', text:'#134e4a', init:'Er' },
@@ -1225,171 +1225,150 @@ function cancelInlineEdit(el) {
   }
 }
 
-// ══ PDF ENRIQUE ══
-function generarPDFEnrique() {
-  const active = t => t.estado !== 'Completado' && t.estado !== 'Cancelado';
-  const esEnrique = t => (t.responsables||[]).some(r => r.toLowerCase().includes('enrique')) || (t.responsable||'').toLowerCase().includes('enrique');
-
-  const paradas    = TASKS.filter(t => active(t) && t.flag);
-  const pendEnrique = TASKS.filter(t => active(t) && esEnrique(t));
-  const topTasks   = TASKS.filter(t => active(t) && (t.top || t.prioridad === 'Alta'));
-
-  // Agrupar top por responsable principal
-  const teamOrder = ['Enrique','Gaby','Osvaldo','Erick','Andrea','Luis'];
-  const topPorPersona = {};
-  teamOrder.forEach(p => {
-    topPorPersona[p] = topTasks.filter(t =>
-      (t.responsables||[]).some(r=>r.toLowerCase().includes(p.toLowerCase())) ||
-      (t.responsable||'').toLowerCase().includes(p.toLowerCase())
-    );
-  });
-
-  const now   = new Date();
-  const dateStr = now.toLocaleDateString('es-MX', {day:'numeric',month:'long',year:'numeric'});
-  const timeStr = now.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
-  const semana  = getISOWeek(now);
-
-  function getISOWeek(d) {
-    const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    tmp.setUTCDate(tmp.getUTCDate() + 4 - (tmp.getUTCDay()||7));
-    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
-    return Math.ceil((((tmp - yearStart) / 86400000) + 1)/7);
-  }
-
-  function prioIcon(p) {
-    return p==='Alta' ? '🔴' : p==='Media' ? '🟡' : '🟢';
-  }
-
-  function tdRow(t) {
-    const resps = (t.responsables||[t.responsable||'']).join(', ');
-    const fecha = t.fecha ? new Date(t.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}) : '—';
-    return `<tr>
-      <td>${t.titulo}</td>
-      <td>${t.area||'—'}</td>
-      <td>${resps}</td>
-      <td>${fecha}</td>
-    </tr>`;
-  }
-
-  function personaBlock(nombre) {
-    const tasks = topPorPersona[nombre];
-    if(!tasks || tasks.length === 0) return '';
-    const rows = tasks.map((t,i) => {
-      const fecha = t.fecha ? new Date(t.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}) : '';
-      return `<div class="prio-row">${i===0?'<span class="num">1.</span>':''}<span class="prio-icon">${prioIcon(t.prioridad)}</span> ${t.titulo}${fecha?` <span class="fecha-tag">${fecha}</span>`:''}${t.flag?' 🚩':''}</div>`;
-    }).join('');
-    return `<div class="persona-block">
-      <div class="persona-name">${nombre.toUpperCase()}</div>
-      <div class="persona-count">${tasks.length} tarea${tasks.length!==1?'s':''} prioritaria${tasks.length!==1?'s':''}</div>
-      ${rows}
-    </div>`;
-  }
-
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Reporte Comercial · POP Investments · W${semana}</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; color:#111; background:#fff; font-size:11px; padding:28px 32px; }
-  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; padding-bottom:14px; border-bottom:2px solid #111; }
-  .header-left h1 { font-size:20px; font-weight:800; letter-spacing:-0.5px; }
-  .header-left h2 { font-size:13px; color:#555; font-weight:400; margin-top:3px; }
-  .header-right { text-align:right; font-size:10px; color:#777; line-height:1.6; }
-  .confidencial { font-size:9px; font-weight:700; letter-spacing:2px; color:#dc2626; margin-top:4px; }
-
-  .section { margin-bottom:22px; }
-  .section-title {
-    font-size:9px; font-weight:700; letter-spacing:3px; color:#fff;
-    background:#111; padding:5px 10px; margin-bottom:10px;
-    display:flex; align-items:center; gap:6px;
-  }
-  .section-title.red { background:#dc2626; }
-  .section-title.indigo { background:#4f46e5; }
-
-  table { width:100%; border-collapse:collapse; font-size:10.5px; }
-  thead tr { background:#f4f4f4; }
-  th { text-align:left; padding:5px 8px; font-size:9px; font-weight:700; letter-spacing:0.5px; color:#555; border-bottom:1px solid #e5e7eb; }
-  td { padding:5px 8px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
-  tr:last-child td { border-bottom:none; }
-  .empty-note { color:#aaa; font-style:italic; padding:6px 8px; font-size:10px; }
-
-  .prio-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-  .persona-block { break-inside:avoid; }
-  .persona-name { font-size:11px; font-weight:800; letter-spacing:1px; margin-bottom:2px; }
-  .persona-count { font-size:9px; color:#888; margin-bottom:6px; }
-  .prio-row { display:flex; align-items:baseline; gap:4px; margin-bottom:4px; line-height:1.4; font-size:10.5px; }
-  .num { font-weight:700; min-width:14px; }
-  .prio-icon { font-size:9px; }
-  .fecha-tag { color:#dc2626; font-size:9px; font-weight:700; }
-
-  .footer { margin-top:28px; padding-top:10px; border-top:1px solid #e5e7eb; display:flex; justify-content:space-between; font-size:9px; color:#aaa; }
-
-  @media print {
-    body { padding:16px 20px; }
-    @page { margin:10mm 12mm; size:letter portrait; }
-  }
-</style>
-</head>
-<body>
-
-<div class="header">
-  <div class="header-left">
-    <h1>Reporte Comercial · POP Investments</h1>
-    <h2>Semana W${semana} · ${dateStr}</h2>
-  </div>
-  <div class="header-right">
-    Generado el ${dateStr} · ${timeStr}<br>
-    Preparado por: Gabriela
-    <div class="confidencial">CONFIDENCIAL</div>
-  </div>
-</div>
-
-<!-- PENDIENTES PARADOS POR ENRIQUE -->
-<div class="section">
-  <div class="section-title red">🚩 &nbsp; PENDIENTES PARADOS POR ENRIQUE</div>
-  ${paradas.length === 0
-    ? '<div class="empty-note">Sin pendientes parados actualmente.</div>'
-    : `<table>
-        <thead><tr><th>Pendiente</th><th>Área</th><th>Responsable</th><th>Fecha</th></tr></thead>
-        <tbody>${paradas.map(tdRow).join('')}</tbody>
-      </table>`}
-</div>
-
-<!-- PENDIENTES DE ENRIQUE -->
-<div class="section">
-  <div class="section-title">📋 &nbsp; PENDIENTES DE ENRIQUE</div>
-  ${pendEnrique.length === 0
-    ? '<div class="empty-note">Sin pendientes asignados a Enrique.</div>'
-    : `<table>
-        <thead><tr><th>Pendiente</th><th>Área</th><th>Responsable</th><th>Fecha</th></tr></thead>
-        <tbody>${pendEnrique.map(tdRow).join('')}</tbody>
-      </table>`}
-</div>
-
-<!-- PRIORIDADES POR ÁREA -->
-<div class="section">
-  <div class="section-title indigo">⭐ &nbsp; PRIORIDADES POR ÁREA</div>
-  <div class="prio-grid">
-    ${teamOrder.map(personaBlock).join('')}
-  </div>
-</div>
-
-<div class="footer">
-  <span>Generado el ${dateStr} · Área Comercial POP Investments</span>
-  <span>CONFIDENCIAL</span>
-</div>
-
-</body>
-</html>`;
-
-  const w = window.open('', '_blank', 'width=900,height=700');
-  if(!w) { showToast('⚠️ Permite ventanas emergentes para generar el PDF'); return; }
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => w.print(), 600);
+// ══ TABLERO PDF ══
+function isoWeek(d) {
+  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - (tmp.getUTCDay()||7));
+  const y0 = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+  return Math.ceil((((tmp - y0) / 86400000) + 1)/7);
 }
+
+function loadLib(src, check) {
+  if (window[check]) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+function buildTableroHTML() {
+  const isActive = t => t.estado !== 'Completado' && t.estado !== 'Cancelado';
+  const now      = new Date();
+  const dateStr  = now.toLocaleDateString('es-MX', {day:'numeric',month:'long',year:'numeric'});
+  const timeStr  = now.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
+  const semana   = isoWeek(now);
+
+  const COLS = [
+    { nombre:'Enrique',  alias:['enrique'],          hd:'#1D4ED8', bg:'#EFF6FF', bd:'#BFDBFE' },
+    { nombre:'Osvaldo',  alias:['osvaldo'],           hd:'#059669', bg:'#ECFDF5', bd:'#A7F3D0' },
+    { nombre:'Erick',    alias:['erick'],             hd:'#D97706', bg:'#FFFBEB', bd:'#FDE68A' },
+    { nombre:'Andrea',   alias:['andrea'],            hd:'#DB2777', bg:'#FDF2F8', bd:'#FBCFE8' },
+    { nombre:'Luis',     alias:['luis'],              hd:'#CA8A04', bg:'#FEFCE8', bd:'#FEF08A' },
+    { nombre:'Gabriela', alias:['gaby','gabriela'],   hd:'#7C3AED', bg:'#F5F3FF', bd:'#DDD6FE' },
+  ];
+
+  const dotColor = t => (t.flag || t.prioridad==='Alta') ? '#DC2626' : t.prioridad==='Media' ? '#F59E0B' : '#D1D5DB';
+
+  const statusLabel = s => ({
+    'Pdte. aprobación Enrique': 'Pdte. aprobación Enrique',
+    'En proceso': 'En proceso',
+    'Rutinario':  'Rutinario',
+    'Pendiente':  '',
+  }[s] ?? s);
+
+  const cols = COLS.map(col => {
+    const tasks = TASKS.filter(t => isActive(t) && (
+      col.alias.some(a => (t.responsable||'').toLowerCase().includes(a)) ||
+      (t.responsables||[]).some(r => col.alias.some(a => r.toLowerCase().includes(a)))
+    ));
+
+    const items = tasks.map(t => {
+      const fecha  = t.fecha ? new Date(t.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}) : '';
+      const isBold = t.top || t.flag || t.prioridad==='Alta';
+      const slabel = statusLabel(t.estado);
+      const dot    = dotColor(t);
+      return '<div style="display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid ' + col.bd + ';">'
+        + '<div style="width:13px;height:13px;border:1.5px solid ' + col.bd + ';border-radius:3px;background:#fff;flex-shrink:0;margin-top:2px;"></div>'
+        + '<div style="width:8px;height:8px;border-radius:50%;background:' + dot + ';flex-shrink:0;margin-top:4px;"></div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:11.5px;font-weight:' + (isBold?700:500) + ';color:#111827;line-height:1.35;word-break:break-word;">' + t.titulo + (t.flag ? ' 🚩' : '') + '</div>'
+        + (slabel ? '<div style="font-size:9.5px;color:#9CA3AF;margin-top:2px;font-style:italic;">' + slabel + '</div>' : '')
+        + '</div>'
+        + (fecha ? '<div style="font-size:9.5px;color:#DC2626;font-weight:700;white-space:nowrap;flex-shrink:0;padding-top:2px;">' + fecha + '</div>' : '')
+        + '</div>';
+    }).join('');
+
+    return '<div style="flex:1;border-radius:10px;overflow:hidden;border:1.5px solid ' + col.bd + ';break-inside:avoid;">'
+      + '<div style="background:' + col.hd + ';padding:11px 14px;display:flex;align-items:center;justify-content:space-between;">'
+      + '<span style="font-size:13px;font-weight:800;color:#fff;letter-spacing:.5px;">' + col.nombre.toUpperCase() + '</span>'
+      + '<span style="background:rgba(255,255,255,0.22);color:#fff;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;">' + tasks.length + ' activos</span>'
+      + '</div>'
+      + '<div style="background:' + col.bg + ';padding:0 12px;min-height:200px;">'
+      + (items || '<div style="padding:20px 0;color:#9CA3AF;font-size:11px;font-style:italic;text-align:center;">Sin pendientes activos</div>')
+      + '</div></div>';
+  }).join('');
+
+  return '<div style="width:1587px;padding:24px 28px;background:#111827;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;">'
+    + '<div>'
+    + '<div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:-.5px;">Tablero de Pendientes · Área Comercial</div>'
+    + '<div style="font-size:12px;color:#9CA3AF;margin-top:4px;">Semana W' + semana + ' · ' + dateStr + '</div>'
+    + '</div>'
+    + '<div style="text-align:right;">'
+    + '<div style="font-size:10px;color:#6B7280;">Generado el ' + dateStr + ' · ' + timeStr + ' · Impresión Tabloide</div>'
+    + '<div style="font-size:9px;font-weight:800;letter-spacing:2.5px;color:#EF4444;margin-top:4px;">CONFIDENCIAL</div>'
+    + '</div></div>'
+    + '<div style="display:flex;gap:12px;align-items:flex-start;">' + cols + '</div>'
+    + '<div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">'
+    + '<span style="font-size:9px;color:#6B7280;">Generado el ' + dateStr + ' · ' + timeStr + ' · Impresión Tabloide</span>'
+    + '<span style="font-size:9px;color:#EF4444;font-weight:800;letter-spacing:2px;">CONFIDENCIAL</span>'
+    + '</div></div>';
+}
+
+async function generarTablero(btn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Generando…';
+  try {
+    await Promise.all([
+      loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'html2canvas'),
+      loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf'),
+    ]);
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;';
+    wrap.innerHTML = buildTableroHTML();
+    document.body.appendChild(wrap);
+
+    const canvas = await html2canvas(wrap.firstElementChild, {
+      scale: 2,
+      backgroundColor: '#111827',
+      useCORS: true,
+      logging: false,
+    });
+    document.body.removeChild(wrap);
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:[432,279] });
+    const pgW = pdf.internal.pageSize.getWidth();
+    const pgH = pdf.internal.pageSize.getHeight();
+    const imgH = pgW * (canvas.height / canvas.width);
+    const img  = canvas.toDataURL('image/png');
+
+    if(imgH <= pgH) {
+      pdf.addImage(img,'PNG',0,0,pgW,imgH);
+    } else {
+      let yo = 0;
+      while(yo < imgH) {
+        if(yo > 0) pdf.addPage();
+        pdf.addImage(img,'PNG',0,-yo,pgW,imgH);
+        yo += pgH;
+      }
+    }
+
+    const d = new Date();
+    pdf.save('tablero-pendientes-' + d.toISOString().slice(0,10) + '.pdf');
+    showToast('✓ PDF descargado');
+  } catch(e) {
+    showToast('❌ Error al generar PDF: ' + e.message);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
 
 async function qaAdd() {
   const titulo = (document.getElementById('qa-titulo')?.value||'').trim();
